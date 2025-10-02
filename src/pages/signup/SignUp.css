@@ -1,0 +1,224 @@
+html body {
+  background-image: url("../../assets/background.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.signup-container {
+    display: flex;
+    background-color: #24b158; /* Darker, softer background */
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border-radius: 15px;
+    overflow: hidden;
+    max-width: 900px;
+    min-height: 600px;
+    margin: 50px auto;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); /* More pronounced shadow */
+}
+
+.signup-left {
+    flex: 1;
+    padding: 40px;
+    background-color: #252525; /* Slightly lighter than container */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid #333;
+}
+
+.signup-left h2 {
+    font-size: 2.5em; /* Larger, more prominent */
+    margin-bottom: 20px;
+    color: #64b5f6; /* A more vibrant accent color */
+    font-family: 'Your Modern Font', sans-serif; /* Replace with your font */
+}
+
+.signup-left p {
+    font-size: 1.2em;
+    line-height: 1.6;
+    color: #d0d0d0; /* Softer text color */
+}
+
+.signup-form {
+    flex: 1;
+    background: #fff;
+    padding: 40px;
+    color: #333;
+    border-radius: 0 15px 15px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.signup-form h2 {
+    margin-bottom: 30px;
+    font-weight: 600;
+    color: #37474f; /* Darker, more readable */
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    color: #37474f;
+    margin-bottom: 15px;
+    padding-left: 30px; /* Make space for the icon */
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus {
+    outline: none;
+    border-color: #4CAF50; /* Example highlight color */
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+label {
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+    color: #546e7a; /* Slightly darker label */
+}
+
+input[type="checkbox"] {
+    transform: scale(1.2);
+    accent-color: #64b5f6; /* Checkbox accent color */
+}
+
+.signup-btn {
+    background: linear-gradient(to right, #4CAF50, #388E3C); /* Example gradient */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Example drop shadow */
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Improve text contrast */
+    border: none;
+    padding: 14px 0;
+    width: 100%;
+    font-size: 1.1em;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 25px;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Added transform */
+}
+
+.signup-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.signup-btn:hover:not(:disabled) {
+    background-color: #388E3C; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add a subtle shadow on hover */
+}
+
+.signup-form p {
+    margin-top: 20px;
+    font-size: 0.95em;
+    color: #78909c; /* Slightly darker */
+}
+
+.signup-form p a {
+    color: #64b5f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.signup-form p a:hover {
+    text-decoration: underline;
+}
+
+.signup-logo {
+  width: 70%; /* Adjust the width as a percentage of its container */
+  max-width: 200px; /* Set a maximum width */
+  height: auto; /* Maintain aspect ratio */
+  margin-bottom: 20px; /* Add some space below the logo */
+  display: block; /* Removes any inline spacing */
+  margin-left: auto; /* Center the image horizontally */
+  margin-right: auto; /* Center the image horizontally */
+  border: rounded ;
+}
+
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Adjust spacing as needed */
+}
+
+.healthcare-icon {
+  width: 30px; /* Adjust size as needed */
+  height: 30px;
+}
+
+.benefit-line {
+  font-style: italic;
+  color: #aaa;
+  margin-top: 5px;
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  position: relative; /* For positioning the icon */
+}
+
+.input-icon {
+  position: absolute;
+  left: 10px;
+  color: #888;
+}
+
+.shake {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(5px); }
+  50% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+  100% { transform: translateX(0); }
+}
+
+.error-message {
+  color: red;
+  font-size: 0.8em;
+  margin-top: 5px;
+}
+
+.how-it-works {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  color: #555;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.feature-icon {
+  color: #4CAF50;
+  font-size: 1.2em;
+}
