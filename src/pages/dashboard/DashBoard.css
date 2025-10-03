@@ -1,0 +1,28 @@
+.dashboard {
+    max-width: 600px;
+    margin: auto;
+    padding: 1rem;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    background: #f4f6f8;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.dose-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+}
+
+button {
+    margin-left: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}

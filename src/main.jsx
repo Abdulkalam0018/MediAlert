@@ -2,7 +2,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import "tailwindcss";
-import './style.css'
 import { ClerkProvider } from '@clerk/clerk-react'
 
 
