@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { loadData, saveData } from "../../utils/Storage";
+import CalendarSync from "../Calendar/Calendar";
+import { Calendar } from "lucide-react";
+// import fontawesome from "@fortawesome/fontawesome";
+// import fontawesome from "@fortawesome/fontawesome";
+// import { library } from "@fortawesome/fontawesome-svg-core";
+// import { faCalendar } from "@fortawesome/free-solid-svg-icons";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
+// library.add(faCalendar);
+// fontawesome.library.add(faCheckCircle);
 export default function TodaySchedule() {
   const [medications, setMedications] = useState([]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     setMedications(loadData("medications") || []);
@@ -19,6 +29,12 @@ export default function TodaySchedule() {
   return (
     <div className="schedule-container">
       <h2>Today's Schedule</h2>
+      <button onClick={() => window.open("/calendar-sync", "_blank")}>
+        Sync Calendar
+      </button>
+
+      {showCalendar && <CalendarSync />}
+
       {medications.map((m) => (
         <div key={m.id} className={`dose-card ${m.status.toLowerCase()}`}>
           <div>
