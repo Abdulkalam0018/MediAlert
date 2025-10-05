@@ -1,0 +1,124 @@
+.dashboard {
+    max-width: 900px;
+    margin: auto;
+    padding: 1.5rem;
+    font-family: "Poppins", sans-serif;
+    color: #222;
+}
+
+/* Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f5f7fa;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.add-btn {
+    background: #2b6ef2;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Stats Section */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    color: #2b6ef2;
+    font-weight: bold;
+}
+
+/* Schedule Section */
+.schedule-container .dose-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.7rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.dose-card.taken {
+    border-left: 5px solid #4caf50;
+}
+
+.status-tag {
+    background: #4caf50;
+    color: white;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+/* Recent Activity */
+.recent-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+}
+
+.activity-item {
+    border-bottom: 1px solid #eee;
+    padding: 0.5rem 0;
+}
+
+.activity-day {
+    color: #777;
+    font-size: 0.8rem;
+}
+
+/* AI Assistant */
+.ai-container {
+    background: #f9fbff;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.ai-container input {
+    width: 70%;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.ai-container button {
+    margin-left: 10px;
+    background: #2b6ef2;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.ai-response {
+    margin-top: 1rem;
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.8rem;
+}
