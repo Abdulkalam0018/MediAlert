@@ -11,6 +11,8 @@ const allowedOrigins = process.env.CORS_ORIGIN
 
 app.use(cors({
     origin: function (origin, callback) {
+        // testing with tools like Postman 
+        if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         } else {
@@ -28,7 +30,11 @@ app.use(clerkMiddleware())
 app.use(express.static("public"))
 
 import userRoutes from './routes/user.routes.js'
+import elixirRoutes from './routes/elixir.routes.js'
+import scheduleRoutes from './routes/schedule.routes.js'
 
 app.use('/api/v1/users', userRoutes)
+app.use('/api/v1/elixirs', elixirRoutes)
+app.use('/api/v1/schedules', scheduleRoutes)
 
 export default app
