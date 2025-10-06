@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-medical.jpg";
 import "./Landing.css"; // Import the CSS
 import Dashboard from "../dashboard/DashBoard";
+import Login from "../../components/Login";
 const Landing = () => {
   const navigate = useNavigate();
 
@@ -62,9 +63,7 @@ const Landing = () => {
             <Button variant="ghost" onClick={() => navigate("/Dashboard")}>
               Features
             </Button>
-            <Button variant="hero" onClick={() => navigate("/Dashboard")}>
-              Get Started Free
-            </Button>
+            <Login />
           </div>
         </div>
       </nav>
@@ -80,13 +79,7 @@ const Landing = () => {
               to help you maintain perfect medication adherence.
             </p>
             <div className="hero-buttons">
-              <Button
-                variant="hero"
-                size="lg"
-                onClick={() => navigate("/Dashboard")}
-              >
-                Get Started Free
-              </Button>
+              <Login />
             </div>
             <div className="hero-badges">
               <div>
@@ -132,13 +125,7 @@ const Landing = () => {
             with MediAlert's smart tracking system.
           </p>
           <div className="cta-buttons">
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => navigate("/Dashboard")}
-            >
-              Get Started Free
-            </Button>
+            <Login />
           </div>
         </div>
       </section>
