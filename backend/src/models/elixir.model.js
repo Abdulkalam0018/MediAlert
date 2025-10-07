@@ -17,6 +17,32 @@ const elixirSchema = new Schema(
         notes: {
             type: String,
         },
+        timings: { 
+            type: [String], // Array of time strings in 24-hour format (e.g., "09:00", "14:00")
+            required: true 
+        },
+        frequency: {
+            type: String,
+            enum: ["daily", "alternate", "every3Days", "weekly"],
+            default: "daily"
+        },
+        startDate: { 
+            type: Date, 
+            required: true 
+        },
+        endDate: { 
+            type: Date, 
+            required: true 
+        },
+        remindersEnabled: {
+            type: Boolean,
+            default: true
+        },
+        status: {
+            type: String,
+            enum: ["active", "paused", "completed"],
+            default: "active"
+        }
     },
     {
         timestamps: true

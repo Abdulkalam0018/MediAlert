@@ -31,10 +31,8 @@ app.use(express.static("public"))
 
 import userRoutes from './routes/user.routes.js'
 import elixirRoutes from './routes/elixir.routes.js'
-import scheduleRoutes from './routes/schedule.routes.js'
 
 app.use('/api/v1/users', userRoutes)
 app.use('/api/v1/elixirs', elixirRoutes)
-app.use('/api/v1/schedules', scheduleRoutes)
 
 export default app

@@ -1,9 +1,16 @@
 import { Elixir } from "../models/elixir.model.js";
 import { getUserFromClerk } from "../utils/clerk.js"
 
+// const daysGapMap = {
+//     "daily": 0,
+//     "alternate": 1,
+//     "every3Days": 2,
+//     "weekly": 6
+// };
+
 const addElixir = async (req, res) => {
     try {
-        const { name, dosage, notes } = req.body;
+        let { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
 
         let _id  = req.auth()?.sessionClaims?.mongoUserId;
         
@@ -17,11 +24,41 @@ const addElixir = async (req, res) => {
             _id = user._id
         }
 
+        if(!name || !timings) {
+            return res.status(400).json({ message: "Name and timings are required." });
+        }
+        
+        if(!Array.isArray(timings) || timings.length === 0) {
+            return res.status(400).json({ message: "Timings must be a non-empty array." });
+        }
+
+        if(!startDate) {
+            startDate = new Date();
+        }
+
+        if(!endDate) {
+            endDate = new Date();
+            endDate.setDate(endDate.getDate() + 30); // Default to one month from now
+        }
+
+        if(!frequency) {
+            frequency = "daily";
+        }
+
+        if(remindersEnabled === undefined || remindersEnabled === null) {
+            remindersEnabled = true;
+        }
+
         const newElixir = new Elixir({
             userId: _id,
             name,
             dosage,
-            notes
+            notes,
+            timings,
+            frequency,
+            startDate,
+            endDate,
+            remindersEnabled
         });
 
         await newElixir.save();
@@ -58,7 +95,7 @@ const getElixirs = async (req, res) => {
 const updateElixir = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, dosage, notes } = req.body;
+        const { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
         let user_id  = req.auth()?.sessionClaims?.mongoUserId;
 
         if(!user_id) {
@@ -79,6 +116,11 @@ const updateElixir = async (req, res) => {
         elixir.name = name || elixir.name;
         elixir.dosage = dosage || elixir.dosage;
         elixir.notes = notes || elixir.notes;
+        elixir.timings = timings || elixir.timings;
+        elixir.frequency = frequency || elixir.frequency;
+        elixir.startDate = startDate || elixir.startDate;
+        elixir.endDate = endDate || elixir.endDate;
+        elixir.remindersEnabled = remindersEnabled || elixir.remindersEnabled;
         await elixir.save();
 
         res.status(200).json({ message: "Elixir updated successfully", elixir });
