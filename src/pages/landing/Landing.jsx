@@ -59,11 +59,18 @@ const Landing = () => {
             </div>
             <h1>MediAlert</h1>
           </div>
-          <div className="nav-buttons">
-            <Button variant="ghost" onClick={() => navigate("/Dashboard")}>
+          <div className="nav-links">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/Dashboard")}
+              className="nav-link"
+            >
               Features
             </Button>
-            <Login />
+
+            <div className="login-wrapper">
+              <Login />
+            </div>
           </div>
         </div>
       </nav>
@@ -78,7 +85,7 @@ const Landing = () => {
               MediAlert uses smart reminders, AI predictions, and calendar sync
               to help you maintain perfect medication adherence.
             </p>
-            <div className="hero-buttons">
+            <div className="login-wrapper">
               <Login />
             </div>
             <div className="hero-badges">
@@ -124,7 +131,7 @@ const Landing = () => {
             Join thousands of users who've improved their medication adherence
             with MediAlert's smart tracking system.
           </p>
-          <div className="cta-buttons">
+          <div className="login-wrapper">
             <Login />
           </div>
         </div>

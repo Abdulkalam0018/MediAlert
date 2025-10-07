@@ -29,7 +29,7 @@ export default function TodaySchedule() {
   return (
     <div className="schedule-container">
       <h2>Today's Schedule</h2>
-      <button onClick={() => window.open("/calendar-sync", "_blank")}>
+      <button onClick={() => window.open("/calendar-sync", "_blank")} className="calendar-btn">
         Sync Calendar
       </button>
 

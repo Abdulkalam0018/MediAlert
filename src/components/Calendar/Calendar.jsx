@@ -21,9 +21,9 @@ export default function CalendarSync() {
   useEffect(() => {
     function initClient() {
       gapi.client.init({
-        apiKey: "AIzaSyDR-Cuc3G4T48pkuqbd5yyPG20DRlV8JjY",
+        apiKey: "AIzaSyBgvx7kY9SMw0OIL818oHgrp0r7psoq7Tc",
         clientId:
-          "1020823201827-7q168s2uif0s7bg7rtmt7vjgmv03e3a1.apps.googleusercontent.com",
+          "1051078256203-393e5g4fl1ej1g1ba6c4beln401q8r66.apps.googleusercontent.com",
 
         discoveryDocs: [
           "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",

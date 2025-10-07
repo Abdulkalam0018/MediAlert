@@ -1,63 +1,117 @@
+/* ==============================
+   Dashboard Layout
+============================== */
 .dashboard {
-    max-width: 900px;
+    max-width: 1000px;
     margin: auto;
-    padding: 1.5rem;
+    padding: 2rem;
     font-family: "Poppins", sans-serif;
     color: #222;
 }
 
-/* Header */
+/* ==============================
+   Header Section
+============================== */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f5f7fa;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #e8f0ff, #ffffff);
+    padding: 1.5rem 2rem;
+    border-radius: 14px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 10px rgba(43, 110, 242, 0.1);
+    transition: all 0.3s ease;
 }
 
+.dashboard-header:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(43, 110, 242, 0.15);
+}
+
+.dashboard-header h1 {
+    font-size: 1.8rem;
+    color: #2b6ef2;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.dashboard-header p {
+    color: #555;
+    font-size: 1rem;
+    margin-left: 10px;
+    flex-grow: 1;
+}
+
+/* Add Medication Button */
 .add-btn {
-    background: #2b6ef2;
+    background: linear-gradient(135deg, #265ae0, #10b981);
     color: white;
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1.3rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 8px rgba(43, 110, 242, 0.3);
 }
 
-/* Stats Section */
+.add-btn:hover {
+    background: linear-gradient(135deg, #1e4dd8, #173cb0);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(43, 110, 242, 0.35);
+}
+
+/* ==============================
+   Stats Section
+============================== */
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
 }
 
 .stat-card {
     background: #fff;
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    border-radius: 14px;
+    padding: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stat-value {
-    font-size: 1.8rem;
+    font-size: 2rem;
     color: #2b6ef2;
-    font-weight: bold;
+    font-weight: 700;
 }
 
-/* Schedule Section */
+/* ==============================
+   Medication Schedule Section
+============================== */
 .schedule-container .dose-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #fff;
     border-radius: 10px;
-    padding: 0.8rem 1rem;
-    margin-bottom: 0.7rem;
+    padding: 0.9rem 1.2rem;
+    margin-bottom: 0.8rem;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.dose-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.08);
 }
 
 .dose-card.taken {
@@ -67,58 +121,90 @@
 .status-tag {
     background: #4caf50;
     color: white;
-    padding: 0.3rem 0.6rem;
+    padding: 0.35rem 0.7rem;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
-/* Recent Activity */
+/* ==============================
+   Recent Activity
+============================== */
 .recent-container {
     background: #fff;
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: 14px;
+    padding: 1.2rem;
     margin-top: 1.5rem;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
 }
 
 .activity-item {
     border-bottom: 1px solid #eee;
-    padding: 0.5rem 0;
+    padding: 0.6rem 0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
 }
 
 .activity-day {
-    color: #777;
-    font-size: 0.8rem;
+    color: #888;
+    font-size: 0.85rem;
 }
 
-/* AI Assistant */
+/* ==============================
+   AI Assistant
+============================== */
 .ai-container {
-    background: #f9fbff;
-    padding: 1rem;
-    border-radius: 12px;
+    background: #f5f9ff;
+    padding: 1.2rem;
+    border-radius: 14px;
     margin-top: 2rem;
     text-align: center;
 }
 
 .ai-container input {
     width: 70%;
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.6rem;
+    border-radius: 10px;
     border: 1px solid #ccc;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.ai-container input:focus {
+    border-color: #2b6ef2;
+    box-shadow: 0 0 0 3px rgba(43, 110, 242, 0.15);
 }
 
 .ai-container button {
-    margin-left: 10px;
-    background: #2b6ef2;
+    margin-left: 12px;
+    background: linear-gradient(135deg, #265ae0, #10b981);
     color: #fff;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
     border: none;
     cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.ai-container button:hover {
+    background: #1e4dd8;
 }
 
 .ai-response {
-    margin-top: 1rem;
+    margin-top: 1.2rem;
     background: #fff;
     border-radius: 10px;
-    padding: 0.8rem;
+    padding: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.calendar-btn {
+    background: linear-gradient(135deg, #265ae0, #10b981);
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
 }
