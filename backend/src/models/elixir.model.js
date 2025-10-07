@@ -23,8 +23,8 @@ const elixirSchema = new Schema(
         },
         frequency: {
             type: String,
-            enum: ["daily", "alternate", "every3Days", "weekly"],
-            default: "daily"
+            enum: ["Daily", "Alternate", "Every3Days", "Weekly", "Monthly"],
+            default: "Daily"
         },
         startDate: { 
             type: Date, 

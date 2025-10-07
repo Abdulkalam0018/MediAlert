@@ -42,7 +42,7 @@ const addElixir = async (req, res) => {
         }
 
         if(!frequency) {
-            frequency = "daily";
+            frequency = "Daily";
         }
 
         if(remindersEnabled === undefined || remindersEnabled === null) {
