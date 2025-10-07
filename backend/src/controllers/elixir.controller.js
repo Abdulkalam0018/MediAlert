@@ -120,7 +120,7 @@ const updateElixir = async (req, res) => {
         elixir.frequency = frequency || elixir.frequency;
         elixir.startDate = startDate || elixir.startDate;
         elixir.endDate = endDate || elixir.endDate;
-        elixir.remindersEnabled = remindersEnabled || elixir.remindersEnabled;
+        if (remindersEnabled !== undefined) elixir.remindersEnabled = remindersEnabled;
         await elixir.save();
 
         res.status(200).json({ message: "Elixir updated successfully", elixir });

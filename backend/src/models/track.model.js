@@ -11,18 +11,21 @@ const trackSchema = new Schema({
         ref: "Elixir", 
         required: true 
     },
-    scheduleId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "Schedule", 
-        required: true 
+    scheduledDate: { 
+        type: Date, 
+        required: true
     },
-    status: { 
-        type: String, 
-        enum: ["unknown", "taken", "missed", "delayed"], 
-        default: "unknown"
-    },
+    timings: [
+        {
+            time: { type: String, required: true }, // "09:00", "14:00"
+            status: { type: String, enum: ["pending", "taken", "missed", "delayed"], default: "pending" },
+            takenAt: { type: Date }
+        }
+    ]
 }, {
     timestamps: true
 });
+
+trackSchema.index({ elixirId: 1, scheduledDate: 1 }, { unique: true })
 
 export const Track = mongoose.model("Track", trackSchema);
