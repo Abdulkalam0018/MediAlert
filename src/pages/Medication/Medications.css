@@ -64,36 +64,176 @@
 
 /* Add Card */
 .add-card {
-    padding: 1.5rem;
+    padding: 2rem;
     box-shadow: var(--shadow-soft);
     position: sticky;
     top: 2rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .add-header {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .add-icon {
     width: 2.5rem;
     height: 2.5rem;
-    background: var(--gradient-primary);
-    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 0.75rem;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
+.add-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+/* Form Styling */
 .add-form .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
+.add-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--foreground);
+    font-size: 0.875rem;
+}
+
+/* Enhanced Input Styling */
+.add-form input,
+.add-form .select-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.add-form input:focus,
+.add-form .select-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.add-form input:hover,
+.add-form .select-input:hover {
+    border-color: var(--muted-foreground);
+}
+
+.add-form input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+}
+
+/* Timing Input Group */
+.timing-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.timing-input-group input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Button Styling */
 .add-btn {
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, #5855eb 0%, #7c3aed 100%);
+}
+
+.add-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+/* Secondary Button (Add Another Time) */
+.add-form button[type="button"] {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    color: var(--foreground);
+    font-weight: 500;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+}
+
+.add-form button[type="button"]:hover {
+    border-color: #6366f1;
+    background-color: rgba(99, 102, 241, 0.05);
+    transform: translateY(-1px);
+}
+
+/* Remove Button (X) */
+.timing-input-group button {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 2px solid #ef4444;
+    background-color: transparent;
+    color: #ef4444;
+    transition: all 0.2s ease;
+}
+
+.timing-input-group button:hover {
+    background-color: #ef4444;
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Header Back Button */
+.medications-header button {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    color: var(--foreground);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.medications-header button:hover {
+    border-color: var(--foreground);
+    background-color: var(--muted);
+    transform: translateY(-1px);
 }
 
 /* List Section */
@@ -106,6 +246,7 @@
 .list-title {
     font-size: 1.5rem;
     font-weight: 700;
+    color: var(--foreground);
 }
 
 /* Empty State */
@@ -113,6 +254,9 @@
     text-align: center;
     padding: 3rem 1rem;
     box-shadow: var(--shadow-soft);
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .empty-icon {
@@ -122,16 +266,32 @@
     color: var(--muted-foreground);
 }
 
+.empty-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin-bottom: 0.5rem;
+}
+
+.empty-text {
+    color: var(--muted-foreground);
+}
+
 /* Medication Cards */
 .med-card {
     padding: 1.5rem;
     box-shadow: var(--shadow-soft);
     transition: all 0.3s ease;
     animation: fadeIn 0.4s ease forwards;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .med-card:hover {
-    box-shadow: var(--shadow-medium);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.2);
 }
 
 .med-item {
@@ -149,27 +309,61 @@
 .med-icon {
     width: 3rem;
     height: 3rem;
-    background: var(--gradient-primary);
-    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 0.75rem;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .med-name {
     font-size: 1.25rem;
     font-weight: 700;
+    color: var(--foreground);
+    margin-bottom: 0.5rem;
 }
 
 .med-details {
     font-size: 0.875rem;
     color: var(--muted-foreground);
-    margin-top: 0.25rem;
+    line-height: 1.4;
 }
 
+.med-details p {
+    margin-bottom: 0.25rem;
+}
+
+.med-details b {
+    color: var(--foreground);
+    font-weight: 600;
+}
+
+/* Action Buttons */
 .med-actions {
     display: flex;
     gap: 0.5rem;
+}
+
+.med-actions button {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.med-actions button:hover {
+    transform: scale(1.05);
+    border-color: var(--foreground);
+    background-color: var(--muted);
+}
+
+.med-actions button:last-child:hover {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
 }
 
 /* Animation */
@@ -183,4 +377,36 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .medications-main {
+        padding: 1rem;
+    }
+    
+    .add-card {
+        padding: 1.5rem;
+    }
+    
+    .med-card {
+        padding: 1rem;
+    }
+    
+    .med-item {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .med-actions {
+        align-self: flex-end;
+    }
+}
+
+/* Focus visible for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
 }
