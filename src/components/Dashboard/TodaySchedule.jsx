@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { loadData, saveData } from "../../utils/Storage";
 import CalendarSync from "../Calendar/Calendar";
 import { Calendar } from "lucide-react";
+import axiosInstance from "../../api/axiosInstance.js"
 // import fontawesome from "@fortawesome/fontawesome";
 // import fontawesome from "@fortawesome/fontawesome";
 // import { library } from "@fortawesome/fontawesome-svg-core";
@@ -15,15 +16,35 @@ export default function TodaySchedule() {
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
-    setMedications(loadData("medications") || []);
+    const fetchMedications = async () => {
+      try {
+        const response = await axiosInstance.get("/tracks/today");
+        
+        setMedications(response.data.medications);
+      } catch (error) {
+        console.error("Error fetching medications:", error);
+      }
+    };
+
+    fetchMedications();
   }, []);
 
-  const markAsTaken = (id) => {
+  const markAsTaken = async (id, time) => {
+
+    try {
+      const response = await axiosInstance.patch(`/tracks/${id}`, {
+        status: "taken",
+        time: time
+      });
+    } catch (error) {
+      console.error("Error marking medication as taken:", error);
+    }
+
     const updated = medications.map((m) =>
-      m.id === id ? { ...m, status: "Taken" } : m
+      m.trackId === id && m.time === time ? { ...m, status: "taken" } : m
     );
     setMedications(updated);
-    saveData("medications", updated);
+    // saveData("medications", updated);
   };
 
   return (
@@ -35,17 +56,17 @@ export default function TodaySchedule() {
 
       {showCalendar && <CalendarSync />}
 
-      {medications.map((m) => (
-        <div key={m.id} className={`dose-card ${m.status.toLowerCase()}`}>
+      {medications && medications.length > 0 && medications.map((m) => (
+        <div key={m._id} className={`dose-card ${m.status.toLowerCase()}`}>
           <div>
             <h4>{m.name}</h4>
             <p>{m.dosage}</p>
           </div>
           <p>{m.time}</p>
-          {m.status === "Taken" ? (
+          {m.status === "taken" ? (
             <span className="status-tag">Taken</span>
           ) : (
-            <button onClick={() => markAsTaken(m.id)}>Mark as Taken</button>
+            <button onClick={() => markAsTaken(m.trackId, m.time)}>Mark as Taken</button>
           )}
         </div>
       ))}
