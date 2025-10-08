@@ -1,5 +1,6 @@
 /* 🌐 Base & Layout */
 .index-container {
+    background-image:url('/background-ligh.png');
     min-height: 100vh;
     font-family: "Inter", sans-serif;
     background: linear-gradient(180deg, #f9fbff 0%, #eef4ff 100%);

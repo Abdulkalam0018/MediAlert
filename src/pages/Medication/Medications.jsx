@@ -1,70 +1,122 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill, Plus, Trash2, Edit2, ArrowLeft } from "lucide-react";
+import { Pill, Plus, Trash2, Edit2, ArrowLeft, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import axiosInstance from "../../api/axiosInstance.js"
 import "./Medications.css"; // ✅ external CSS
 
 const Medications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [medications, setMedications] = useState([
-    {
-      id: "1",
-      name: "Aspirin",
-      dosage: "100mg",
-      frequency: "Daily",
-      time: "08:00",
-    },
-    {
-      id: "2",
-      name: "Metformin",
-      dosage: "500mg",
-      frequency: "Twice daily",
-      time: "12:00",
-    },
-  ]);
+  const [medications, setMedications] = useState([])
+
+  useEffect(() => {
+    const fetchMedications = async () => {
+      try {
+        const response = await axiosInstance.get("/elixirs/");
+        setMedications(response.data);
+      } catch (error) {
+        console.error("Error fetching medications:", error);
+      }
+    };
+
+    fetchMedications();
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
     frequency: "Daily",
-    time: "",
+    timings: [""],
   });
 
-  const handleSubmit = (e) => {
+  const handleAddTiming = () => {
+    setFormData({
+      ...formData,
+      timings: [...formData.timings, ""]
+    });
+  };
+
+  const handleRemoveTiming = (index) => {
+    if (formData.timings.length > 1) {
+      const newTimings = formData.timings.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        timings: newTimings
+      });
+    }
+  };
+
+  const handleTimingChange = (index, value) => {
+    const newTimings = [...formData.timings];
+    newTimings[index] = value;
+    setFormData({
+      ...formData,
+      timings: newTimings
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.dosage || !formData.time) {
+    
+    // Filter out empty timings
+    
+    const validTimings = formData.timings.filter(timing => timing.trim() !== "");
+    
+    if (!formData.name || !formData.dosage || validTimings.length === 0) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including at least one timing",
         variant: "destructive",
       });
       return;
     }
 
-    const newMed = {
-      id: Date.now().toString(),
-      ...formData,
-    };
+    try {
+      const medicationData = {
+        name: formData.name,
+        dosage: formData.dosage,
+        frequency: formData.frequency,
+        timings: validTimings,
+      };
 
-    setMedications([...medications, newMed]);
-    setFormData({ name: "", dosage: "", frequency: "Daily", time: "" });
-    toast({
-      title: "Medication added",
-      description: `${newMed.name} has been added to your list`,
-    });
+      const response = await axiosInstance.post("/elixirs/add", medicationData);
+      setMedications([...medications, response.data.elixir]);
+      setFormData({ name: "", dosage: "", frequency: "Daily", timings: [""] });
+      toast({
+        title: "Medication added",
+        description: `${medicationData.name} has been added to your list`,
+      });
+    } catch (error) {
+      console.error("Error adding medication:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add medication. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDelete = (id) => {
-    setMedications(medications.filter((med) => med.id !== id));
-    toast({
-      title: "Medication removed",
-      description: "The medication has been deleted",
-    });
+  const handleDelete = async (id) => {
+    try {
+      await axiosInstance.delete(`/elixirs/${id}`);
+      setMedications(medications.filter((med) => med._id !== id));
+      toast({
+        title: "Medication removed",
+        description: "The medication has been deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting medication:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete medication. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -133,23 +185,44 @@ const Medications = () => {
                   className="select-input"
                 >
                   <option value="Daily">Daily</option>
-                  <option value="Twice daily">Twice daily</option>
-                  <option value="Three times daily">Three times daily</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="As needed">As needed</option>
+                  <option value="Twice daily">Alternate</option>
+                  <option value="Three times daily">Weekly</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <Label htmlFor="time">Time *</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, time: e.target.value })
-                  }
-                />
+                <Label>Timings *</Label>
+                {formData.timings.map((timing, index) => (
+                  <div key={index} className="timing-input-group" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                    <Input
+                      type="time"
+                      value={timing}
+                      onChange={(e) => handleTimingChange(index, e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                    {formData.timings.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveTiming(index)}
+                        style={{ flexShrink: 0 }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddTiming}
+                  className="mt-2"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Another Time
+                </Button>
               </div>
 
               <Button type="submit" className="add-btn" size="lg">
@@ -177,7 +250,7 @@ const Medications = () => {
               <div className="med-list">
                 {medications.map((med, index) => (
                   <Card
-                    key={med.id}
+                    key={med._id}
                     className="med-card"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -196,7 +269,19 @@ const Medications = () => {
                               <b>Frequency:</b> {med.frequency}
                             </p>
                             <p>
-                              <b>Time:</b> {med.time}
+                              {med.timings && med.timings.length > 0 ? (
+                                <>
+                                  <b>Timings:</b>{" "}
+                                  {med.timings.map((time, index) => (
+                                    <span key={index}>
+                                      {time}
+                                      {index < med.timings.length - 1 && ", "}
+                                    </span>
+                                  ))}
+                                </>
+                              ) : (
+                                <span>No specific timings</span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -208,7 +293,7 @@ const Medications = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(med.id)}
+                          onClick={() => handleDelete(med._id)}
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
