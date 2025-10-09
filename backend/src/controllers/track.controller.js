@@ -1,6 +1,7 @@
 import { Elixir } from "../models/elixir.model.js";
 import { Track } from "../models/track.model.js"
-import { getUserFromClerk } from "../utils/clerk.js"
+import { getUserId } from "../utils/clerk.js"
+import { generateDailyTracksOfUser } from "../utils/sync.js"
 
 // Utility function to transform tracks into timing-based documents
 const transformTracksToTimings = (tracks) => {
@@ -72,16 +73,10 @@ const sync = async (req, res) => {
     try {
         let scheduledDate = req?.body?.scheduledDate ? new Date(req.body.scheduledDate) : null;
 
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
-                
-        if(!_id) {
-            const user = await getUserFromClerk(req)
+        const _id = await getUserId(req);
 
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
         
         if(!scheduledDate) {
@@ -109,16 +104,10 @@ const sync = async (req, res) => {
 
 const getAllTracks = async (req, res) => {
     try {
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
+        const _id = await getUserId(req);
 
         if (!_id) {
-            const user = await getUserFromClerk(req);
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id;
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const tracks = await Track.find({ userId: _id }).populate('elixirId');
@@ -134,16 +123,11 @@ const getAllTracks = async (req, res) => {
 const getTrackById = async (req, res) => {
     try {
         const { id } = req.params;
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
 
-        if(!_id) {
-            const user = await getUserFromClerk(req);
+        const _id = await getUserId(req);
 
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id;
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const track = await Track.findOne({ _id: id, userId: _id }).populate('elixirId');
@@ -160,32 +144,28 @@ const getTrackById = async (req, res) => {
     }
 };
 
-const getTodayTracks = async (req, res) => {
+const getTracksByDate = async (req, res) => {
     try {
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
+        const _id = await getUserId(req);
 
-        if(!_id) {
-
-            const user = await getUserFromClerk(req);
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id;
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
-        
-        let startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        let endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
+
+        const dateParam = req.params?.date;
+
+        let requestedDate = dateParam ? new Date(dateParam) : new Date();
+        requestedDate.setHours(0, 0, 0, 0);
+        let nextDate = new Date(requestedDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        nextDate.setHours(0, 0, 0, 0);
 
         // Create tracks for today if they don't exist
-        await createTracksForDate(_id, startOfToday);
+        await createTracksForDate(_id, requestedDate);
 
         const tracks = await Track.find({ 
             userId: _id,
-            scheduledDate: { $gte: startOfToday, $lte: endOfToday }
+            scheduledDate: { $gte: requestedDate, $lt: nextDate }
         }).populate('elixirId');
 
         const medications = transformTracksToTimings(tracks);
@@ -213,16 +193,10 @@ const updateTrackTimingStatus = async (req, res) => {
         const { id } = req.params;
         const { time, status } = req.body;
 
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
+        const _id = await getUserId(req);
 
-        if(!_id) {
-            const user = await getUserFromClerk(req);
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id;
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const track = await Track.findOne({ _id: id, userId: _id });
@@ -250,10 +224,124 @@ const updateTrackTimingStatus = async (req, res) => {
     }   
 };
 
+
+// Adherence Feature
+
+const getAdherenceData = async (req, res) => {
+    try {
+        const _id = await getUserId(req);
+
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
+        }
+
+        await generateDailyTracksOfUser(_id)
+
+        const tracks = await Track.find({ userId: _id }).sort({ scheduledDate: -1 });
+
+        let totalDoses = 0;
+        let takenDoses = 0;
+        let missedDoses = 0;
+        let delayedDoses = 0;
+        
+        let todaysTotalDoses = 0;
+        let todaysTakenDoses = 0;
+        let todaysMissedDoses = 0;
+        let todaysDelayedDoses = 0;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        tracks.map(track => {
+            totalDoses += track.timings.length;
+            takenDoses += track.timings.filter(t => t.status === "taken").length;
+            missedDoses += track.timings.filter(t => t.status === "missed").length;
+            delayedDoses += track.timings.filter(t => t.status === "delayed").length;
+
+            if (track.scheduledDate.getDate() === today.getDate()) {
+                todaysTotalDoses += track.timings.length;
+                todaysTakenDoses += track.timings.filter(t => t.status === "taken").length;
+                todaysMissedDoses += track.timings.filter(t => t.status === "missed").length;
+                todaysDelayedDoses += track.timings.filter(t => t.status === "delayed").length;
+            }
+        });
+
+        const activeElixirs = await Elixir.find({ userId: _id, status: "active" })
+
+        // Calculate adherence streak
+        const streak = calculateAdherenceStreak(tracks, today);
+
+        const adherenceData = {
+            totalDoses,
+            takenDoses,
+            missedDoses,
+            delayedDoses,
+            adherenceRate: totalDoses > 0 ? (((takenDoses + delayedDoses) / totalDoses) * 100).toFixed(2) : "0.00",
+            todaysTotalDoses,
+            todaysTakenDoses,
+            todaysMissedDoses,
+            todaysDelayedDoses,
+            activeMedications: activeElixirs.length,
+            streak: streak
+        };
+
+        return res.status(200).json({ adherenceData });
+    } catch (error) {
+        console.error("Error fetching adherence data:", error);
+        return res.status(500).json({ message: "Internal server error." });
+    }
+};
+
+// Helper function to calculate adherence streak
+const calculateAdherenceStreak = (tracks, fromDate) => {
+    if (tracks.length === 0) {
+        return 0;
+    }
+
+    let lastNonAdherentDate = null;
+    
+    for (const track of tracks) {
+        // Skip today's tracks and any future tracks
+        if (track.scheduledDate >= fromDate) {
+            continue;
+        }
+        
+        // Check if this track has any missed or pending timings
+        const hasNonAdherentTiming = track.timings.some(timing => 
+            timing.status === 'missed' || timing.status === 'pending'
+        );
+        
+        if (hasNonAdherentTiming) {
+            lastNonAdherentDate = track.scheduledDate;
+            break;
+        }
+    }
+    
+    // If no non-adherent date found, streak goes back to the earliest track
+    if (!lastNonAdherentDate) {
+        const earliestTrack = tracks[tracks.length - 1];
+        if (!earliestTrack || earliestTrack.scheduledDate.toDateString() === fromDate.toDateString()) {
+            return 0;
+        }
+        // Calculate days from earliest track to yesterday
+        const yesterday = new Date(fromDate);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const timeDiff = yesterday.getTime() - earliestTrack.scheduledDate.getTime();
+        return Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
+    }
+    
+    // Calculate days between last non-adherent date and yesterday
+    const yesterday = new Date(fromDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const timeDiff = yesterday.getTime() - lastNonAdherentDate.getTime();
+    return Math.floor(timeDiff / (1000 * 3600 * 24));
+};
+
 export {
     sync,
     getAllTracks,
     getTrackById,
-    getTodayTracks,
-    updateTrackTimingStatus
+    getTracksByDate,
+    updateTrackTimingStatus,
+    getAdherenceData
 };

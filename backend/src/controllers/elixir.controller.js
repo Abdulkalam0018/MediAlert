@@ -1,20 +1,14 @@
 import { Elixir } from "../models/elixir.model.js";
-import { getUserFromClerk } from "../utils/clerk.js"
+import { getUserId } from "../utils/clerk.js"
 
 const addElixir = async (req, res) => {
     try {
         let { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
 
-        let _id  = req.auth()?.sessionClaims?.mongoUserId;
-        
-        if(!_id) {
-            const user = await getUserFromClerk(req)
+        const _id = await getUserId(req);
 
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            _id = user._id
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         if(!name || !timings) {
@@ -64,17 +58,10 @@ const addElixir = async (req, res) => {
 
 const getElixirs = async (req, res) => {
     try {
-        let _id = req.auth()?.sessionClaims?.mongoUserId;
+        const _id = await getUserId(req);
 
-        if(!_id) {
-            const user = await getUserFromClerk(req)
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-            console.log(user);
-            
-            _id = user._id
+        if (!_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const elixirs = await Elixir.find({ userId: _id });
@@ -89,16 +76,10 @@ const updateElixir = async (req, res) => {
     try {
         const { id } = req.params;
         let { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
-        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
+        const user_id = await getUserId(req);
 
-        if(!user_id) {
-            const user = await getUserFromClerk(req)
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            user_id = user._id
+        if (!user_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const elixir = await Elixir.findOne({ _id: id, userId: user_id });
@@ -143,16 +124,10 @@ const extendEndDate = async (req, res) => {
     try {
         const { id } = req.params;
         let { additionalDays } = req.body;
-        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
+        const user_id = await getUserId(req);
 
-        if(!user_id) {
-            const user = await getUserFromClerk(req)
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            user_id = user._id
+        if (!user_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const elixir = await Elixir.findOne({ _id: id, userId: user_id });
@@ -177,15 +152,10 @@ const extendEndDate = async (req, res) => {
 const toggleStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
-        if(!user_id) {
-            const user = await getUserFromClerk(req)
+        const user_id = await getUserId(req);
 
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            user_id = user._id
+        if (!user_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const elixir = await Elixir.findOne({ _id: id, userId: user_id });
@@ -212,16 +182,10 @@ const toggleStatus = async (req, res) => {
 const deleteElixir = async (req, res) => {
     try {
         const { id } = req.params;
-        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
+        const user_id = await getUserId(req);
 
-        if(!user_id) {
-            const user = await getUserFromClerk(req)
-
-            if (!user) {
-                return res.status(404).json({ message: "User not found." });
-            }
-
-            user_id = user._id
+        if (!user_id) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
         const elixir = await Elixir.findOneAndDelete({ _id: id, userId: user_id });
