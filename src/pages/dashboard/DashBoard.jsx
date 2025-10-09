@@ -1,4 +1,5 @@
 import React from "react";
+import Login from "../../components/Login.jsx"
 import DashboardHeader from "../../components/dashboard/DashboardHeader";
 import AdherenceStats from "../../components/dashboard/AdherenceStats";
 import TodaySchedule from "../../components/Dashboard/TodaySchedule";
@@ -8,12 +9,15 @@ import "../../components/Dashboard/Dashboard.css";
 
 export default function Dashboard() {
   return (
-    <div className="dashboard">
-      <DashboardHeader />
-      <AdherenceStats/>
-      <TodaySchedule />
-      <RecentActivity />
-      <AIHealthAssistant />
-    </div>
+    <>
+      <Login />
+      <div className="dashboard">
+        <DashboardHeader />
+        <AdherenceStats/>
+        <TodaySchedule />
+        <RecentActivity />
+        <AIHealthAssistant />
+      </div>
+    </>
   );
 }

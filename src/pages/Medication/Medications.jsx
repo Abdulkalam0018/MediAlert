@@ -185,8 +185,8 @@ const Medications = () => {
                   className="select-input"
                 >
                   <option value="Daily">Daily</option>
-                  <option value="Twice daily">Alternate</option>
-                  <option value="Three times daily">Weekly</option>
+                  <option value="Alternate">Alternate</option>
+                  <option value="Weekly">Weekly</option>
                 </select>
               </div>
 
