@@ -1,4 +1,5 @@
 import mongoose, {Schema} from "mongoose"
+import { Track } from "./track.model.js";
 
 const elixirSchema = new Schema(
     {
@@ -34,14 +35,14 @@ const elixirSchema = new Schema(
         endDate: { 
             type: Date, 
             required: true 
-        },
+        }, // ask on frontend for how many days to take the elixir
         remindersEnabled: {
             type: Boolean,
             default: true
         },
         status: {
             type: String,
-            enum: ["active", "paused", "completed"],
+            enum: ["active", "completed"],
             default: "active"
         }
     },
@@ -49,5 +50,13 @@ const elixirSchema = new Schema(
         timestamps: true
     }
 )
+
+elixirSchema.pre("findOneAndDelete", async function (next) {
+  const elixir = await this.model.findOne(this.getFilter());
+  if (elixir) {
+    await Track.deleteMany({ elixirId: elixir._id });
+  }
+  next();
+});
 
 export const Elixir = mongoose.model("Elixir", elixirSchema)

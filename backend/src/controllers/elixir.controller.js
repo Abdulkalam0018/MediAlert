@@ -1,13 +1,6 @@
 import { Elixir } from "../models/elixir.model.js";
 import { getUserFromClerk } from "../utils/clerk.js"
 
-// const daysGapMap = {
-//     "daily": 0,
-//     "alternate": 1,
-//     "every3Days": 2,
-//     "weekly": 6
-// };
-
 const addElixir = async (req, res) => {
     try {
         let { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
@@ -41,7 +34,7 @@ const addElixir = async (req, res) => {
             endDate.setDate(endDate.getDate() + 30); // Default to one month from now
         }
 
-        if(!frequency) {
+        if(!frequency || !["Daily", "Alternate", "Every3Days", "Weekly"].includes(frequency)) {
             frequency = "Daily";
         }
 
@@ -95,7 +88,7 @@ const getElixirs = async (req, res) => {
 const updateElixir = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
+        let { name, dosage, notes, timings, frequency, startDate, endDate, remindersEnabled } = req.body;
         let user_id  = req.auth()?.sessionClaims?.mongoUserId;
 
         if(!user_id) {
@@ -113,6 +106,22 @@ const updateElixir = async (req, res) => {
             return res.status(404).json({ message: "Elixir not found." });
         }
 
+        if(timings && (!Array.isArray(timings) || timings.length === 0)) {
+            return res.status(400).json({ message: "Timings must be a non-empty array." });
+        }
+
+        if(frequency && !["Daily", "Alternate", "Every3Days", "Weekly"].includes(frequency)) {
+            frequency = "Daily";
+        }
+
+        if(startDate && isNaN(new Date(startDate).getTime())) { 
+            startDate = elixir.startDate;
+        }
+
+        if(endDate && isNaN(new Date(endDate).getTime())) { 
+            endDate = elixir.endDate;
+        }
+
         elixir.name = name || elixir.name;
         elixir.dosage = dosage || elixir.dosage;
         elixir.notes = notes || elixir.notes;
@@ -126,6 +135,76 @@ const updateElixir = async (req, res) => {
         res.status(200).json({ message: "Elixir updated successfully", elixir });
     } catch (error) {
         console.error("Error updating elixir:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+const extendEndDate = async (req, res) => {
+    try {
+        const { id } = req.params;
+        let { additionalDays } = req.body;
+        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
+
+        if(!user_id) {
+            const user = await getUserFromClerk(req)
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found." });
+            }
+
+            user_id = user._id
+        }
+
+        const elixir = await Elixir.findOne({ _id: id, userId: user_id });
+        if (!elixir) {
+            return res.status(404).json({ message: "Elixir not found." });
+        }
+
+        if (!additionalDays || isNaN(additionalDays) || additionalDays <= 0) {
+            return res.status(400).json({ message: "Invalid additionalDays value." });
+        }
+
+        elixir.endDate.setDate(elixir.endDate.getDate() + additionalDays);
+        await elixir.save();
+
+        res.status(200).json({ message: "Elixir end date extended successfully", elixir });
+    } catch (error) {
+        console.error("Error extending elixir end date:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+const toggleStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        let user_id  = req.auth()?.sessionClaims?.mongoUserId;
+        if(!user_id) {
+            const user = await getUserFromClerk(req)
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found." });
+            }
+
+            user_id = user._id
+        }
+
+        const elixir = await Elixir.findOne({ _id: id, userId: user_id });
+        if (!elixir) {
+            return res.status(404).json({ message: "Elixir not found." });
+        }
+
+        elixir.endDate = new Date();
+
+        if (elixir.status === "active") {
+            elixir.status = "completed";
+        } else {
+            elixir.status = "active";
+        }
+        await elixir.save();
+
+        res.status(200).json({ message: "Elixir status toggled successfully", elixir });
+    } catch (error) {
+        console.error("Error toggling elixir status:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
 }
@@ -161,5 +240,7 @@ export {
     addElixir,
     getElixirs,
     updateElixir,
+    extendEndDate,
+    toggleStatus,
     deleteElixir,
 };
