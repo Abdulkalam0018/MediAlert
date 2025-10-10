@@ -2,99 +2,35 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Calendar, CheckCircle2, ExternalLink, Info } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
-import { gapi } from "gapi-script";
-import { loadData } from "../../utils/Storage"; // helper to read localStorage
+import axiosInstance from "../../api/axiosInstance.js";
 import "./Calendar.css";
+
 
 export default function CalendarSync() {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [medications, setMedications] = useState([]);
 
-  // Load medications from localStorage
   useEffect(() => {
-    setMedications(loadData("medications") || []);
+    const fetchUser = async () => {
+      try {
+        const response = await axiosInstance.get("/users/me");        
+        setIsConnected(response.data?.user?.allowCalendarSync || false);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUser();
   }, []);
 
-  // Initialize Google API client
-  useEffect(() => {
-    function initClient() {
-      gapi.client.init({
-        apiKey: "AIzaSyBgvx7kY9SMw0OIL818oHgrp0r7psoq7Tc",
-        clientId:
-          "1051078256203-393e5g4fl1ej1g1ba6c4beln401q8r66.apps.googleusercontent.com",
-
-        discoveryDocs: [
-          "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
-        ],
-        scope: "https://www.googleapis.com/auth/calendar.events",
-      });
-    }
-    gapi.load("client:auth2", initClient);
-  }, []);
-
-  // Handle Google sign-in and sync events
-  const handleGoogleCalendarAuth = async () => {
-    if (medications.length === 0) {
-      toast.error("No medications found to sync!");
-      return;
-    }
-
-    setIsLoading(true);
+  const handleDisconnect = async () => {
     try {
-      const authInstance = gapi.auth2.getAuthInstance();
-      await authInstance.signIn();
-
-      const token = authInstance.currentUser
-        .get()
-        .getAuthResponse().access_token;
-      await createEvents(token);
-
-      setIsConnected(true);
-      toast.success("All medications synced to Google Calendar!");
+      const response = await axiosInstance.get("/google/disconnect");
+      setIsConnected(response.data?.allowCalendarSync || false);
     } catch (error) {
-      console.error("Google Calendar auth failed:", error);
-      toast.error("Failed to sync with Google Calendar");
-    } finally {
-      setIsLoading(false);
+      console.error("Error fetching user data:", error);  
     }
-  };
-
-  // Create events in Google Calendar
-  const createEvents = async (accessToken) => {
-    for (const med of medications) {
-      const startTime = new Date(med.time).toISOString();
-      const endTime = new Date(
-        new Date(med.time).getTime() + 15 * 60000
-      ).toISOString();
-
-      const event = {
-        summary: `Take ${med.name} (${med.dosage})`,
-        description: "Medication reminder from MediAlert",
-        start: { dateTime: startTime, timeZone: "Asia/Kolkata" },
-        end: { dateTime: endTime, timeZone: "Asia/Kolkata" },
-        reminders: {
-          useDefault: false,
-          overrides: [{ method: "popup", minutes: 15 }],
-        },
-      };
-
-      await axios.post(
-        "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-        event,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-  };
-
-  const handleDisconnect = () => {
-    setIsConnected(false);
+    
     toast.info("Disconnected from Google Calendar");
   };
 
@@ -130,7 +66,7 @@ export default function CalendarSync() {
 
           <button
             className="connect-btn"
-            onClick={handleGoogleCalendarAuth}
+            onClick={() => window.location.href = 'http://localhost:8000/api/v1/google/auth'}
             disabled={isLoading}
           >
             {isLoading ? "Connecting..." : "Connect & Sync Calendar"}

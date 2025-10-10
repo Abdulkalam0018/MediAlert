@@ -29,11 +29,11 @@ export default function TodaySchedule() {
     fetchMedications();
   }, []);
 
-  const markAsTaken = async (id, time) => {
+  const markAsTaken = async (id, time, status) => {
 
     try {
       const response = await axiosInstance.patch(`/tracks/${id}`, {
-        status: "taken",
+        status: status,
         time: time
       });
     } catch (error) {
@@ -41,7 +41,7 @@ export default function TodaySchedule() {
     }
 
     const updated = medications.map((m) =>
-      m.trackId === id && m.time === time ? { ...m, status: "taken" } : m
+      m.trackId === id && m.time === time ? { ...m, status: status } : m
     );
     setMedications(updated);
     // saveData("medications", updated);
@@ -63,10 +63,19 @@ export default function TodaySchedule() {
             <p>{m.dosage}</p>
           </div>
           <p>{m.time}</p>
-          {m.status === "taken" ? (
-            <span className="status-tag">Taken</span>
+          {m.status !== "pending" ? (
+            <span className="status-tag">{m.status}</span>
           ) : (
-            <button onClick={() => markAsTaken(m.trackId, m.time)}>Mark as Taken</button>
+            // <button onClick={() => markAsTaken(m.trackId, m.time)}>Mark as Taken</button>
+            <select 
+              onChange={(e) => markAsTaken(m.trackId, m.time, e.target.value)}
+              defaultValue=""
+            >
+              <option value="" disabled>Select Status</option>
+              <option value="taken">Taken</option>
+              <option value="delayed">Delayed</option>
+              <option value="missed">Missed</option>
+            </select>
           )}
         </div>
       ))}
