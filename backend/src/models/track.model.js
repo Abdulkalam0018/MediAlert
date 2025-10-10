@@ -19,7 +19,9 @@ const trackSchema = new Schema({
         {
             time: { type: String, required: true }, // "09:00", "14:00"
             status: { type: String, enum: ["pending", "taken", "missed", "delayed"], default: "pending" },
-            takenAt: { type: Date }
+            takenAt: { type: Date },
+            calendarEventId: { type: String }, // Google Calendar event ID
+            lastSyncedAt: { type: Date } // Last time this timing was synced to calendar
         }
     ]
 }, {

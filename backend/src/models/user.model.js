@@ -15,6 +15,19 @@ const userSchema = new Schema(
             type: String,
             required: true,
         },
+        allowCalendarSync: {
+            type: Boolean,
+            default: false,
+        },
+        googleTokens: {
+            access_token: String,
+            refresh_token: String,
+            expires_date: Date,
+            last_refresh_at: Date,
+        },
+        lastCalendarSync: {
+            type: Date,
+        },
     },
     {
         timestamps: true
