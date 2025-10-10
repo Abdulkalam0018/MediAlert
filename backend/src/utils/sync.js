@@ -82,7 +82,6 @@ const generateDailyTracks = async () => {
 };
 
 const generateDailyTracksOfUser = async (userId) => {
-  console.log(`🔄 Running daily track generation job for user ${userId} at ${new Date().toLocaleString()}`);
   const today = dayjs().startOf("day").toDate();
 
   try {
@@ -94,7 +93,6 @@ const generateDailyTracksOfUser = async (userId) => {
 
     const tracksCreated = await processElixirsAndGenerateTracks(activeElixirs);
     
-    console.log(`✅ Daily track generation done for user ${userId} at ${new Date().toLocaleString()}. Created ${tracksCreated} tracks.`);
   } catch (error) {
     console.error("Error in generateDailyTracksOfUser:", error);
     throw error;
@@ -135,7 +133,6 @@ const refreshGoogleToken = async (user) => {
     
     await user.save();
 
-    console.log(`✅ Refreshed access token for user ${user._id}`);
     return oauth2Client;
   } catch (error) {
     console.error(`Error refreshing token for user ${user._id}:`, error.message);
@@ -152,7 +149,6 @@ const getValidOAuth2Client = async (user) => {
 
   // Check if token is expired or about to expire (within 5 minutes)
   if (expiresDate && new Date(expiresDate).getTime() - now.getTime() < 5 * 60 * 1000) {
-    console.log(`🔄 Token expired or expiring soon for user ${user._id}, refreshing...`);
     return await refreshGoogleToken(user);
   }
 
@@ -231,7 +227,6 @@ const processTracksAndSyncToCalendar = async (tracks, user) => {
           await track.save();
           eventsCreated++;
 
-          console.log(`✅ Created calendar event for ${elixir.name} at ${timing.time} on ${dayjs(track.scheduledDate).format('YYYY-MM-DD')}`);
           
           // Add small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -254,7 +249,7 @@ const processTracksAndSyncToCalendar = async (tracks, user) => {
  * Syncs calendar for a specific user
  */
 const syncCalendarForUser = async (userId) => {
-  console.log(`🔄 Running calendar sync for user ${userId} at ${new Date().toLocaleString()}`);
+
   const today = dayjs().startOf("day").toDate();
 
   try {
@@ -266,12 +261,10 @@ const syncCalendarForUser = async (userId) => {
     }
 
     if (!user.allowCalendarSync) {
-      console.log(`⚠️ Calendar sync disabled for user ${userId}`);
       return { eventsCreated: 0, eventsFailed: 0, message: 'Calendar sync is disabled' };
     }
 
     if (!user.googleTokens?.access_token || !user.googleTokens?.refresh_token) {
-      console.log(`⚠️ User ${userId} has not connected Google Calendar`);
       return { eventsCreated: 0, eventsFailed: 0, message: 'Google Calendar not connected' };
     }
 
@@ -284,7 +277,6 @@ const syncCalendarForUser = async (userId) => {
     .lean();
 
     if (tracks.length === 0) {
-      console.log(`ℹ️ No tracks found for user ${userId}`);
       return { eventsCreated: 0, eventsFailed: 0, message: 'No tracks to sync' };
     }
 
@@ -297,7 +289,6 @@ const syncCalendarForUser = async (userId) => {
     }));
 
     if (tracksToSync.length === 0) {
-      console.log(`ℹ️ All tracks already synced for user ${userId}`);
       return { eventsCreated: 0, eventsFailed: 0, message: 'All tracks already synced' };
     }
 
@@ -310,7 +301,6 @@ const syncCalendarForUser = async (userId) => {
     user.lastCalendarSync = new Date();
     await user.save();
 
-    console.log(`✅ Calendar sync completed for user ${userId}. Events created: ${result.eventsCreated}, Failed: ${result.eventsFailed}`);
     
     return {
       ...result,
@@ -337,11 +327,9 @@ const syncCalendarForAllUsers = async () => {
     });
 
     if (users.length === 0) {
-      console.log('ℹ️ No users with calendar sync enabled');
       return { usersProcessed: 0, totalEventsCreated: 0, totalEventsFailed: 0, errors: [] };
     }
 
-    console.log(`Found ${users.length} users with calendar sync enabled`);
 
     let usersProcessed = 0;
     let totalEventsCreated = 0;
@@ -394,7 +382,6 @@ const deleteCalendarEvent = async (eventId, user) => {
       eventId: eventId,
     });
 
-    console.log(`✅ Deleted calendar event ${eventId} for user ${user._id}`);
     return true;
   } catch (error) {
     console.error(`Error deleting calendar event ${eventId}:`, error.message);
@@ -416,7 +403,6 @@ const updateCalendarEvent = async (eventId, eventData, user) => {
       requestBody: eventData,
     });
 
-    console.log(`✅ Updated calendar event ${eventId} for user ${user._id}`);
     return response.data;
   } catch (error) {
     console.error(`Error updating calendar event ${eventId}:`, error.message);

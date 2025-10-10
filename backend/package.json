@@ -17,6 +17,7 @@
     "dayjs": "^1.11.18",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
     "googleapis": "^162.0.0",
     "mongoose": "^8.19.0",
     "node-cron": "^4.2.1"

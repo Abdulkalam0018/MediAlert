@@ -82,8 +82,37 @@ const me = async (req, res) => {
     }
 };
 
+const saveFcmToken = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const { fcmToken } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
+        }
+
+        if (!fcmToken) {
+            return res.status(400).json({ message: "Bad Request: FCM token is required." });
+        }
+
+        const user = await User.findOne({ clerkId: userId });
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        user.fcmToken = fcmToken;
+        await user.save();
+
+        res.status(200).json({ message: "FCM token saved successfully." });
+    } catch (error) {
+        console.error("Error saving FCM token:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
 export {
     test,
     sync,
-    me
+    me,
+    saveFcmToken
 };

@@ -28,6 +28,9 @@ const userSchema = new Schema(
         lastCalendarSync: {
             type: Date,
         },
+        fcmToken: {
+            type: String,
+        }
     },
     {
         timestamps: true
