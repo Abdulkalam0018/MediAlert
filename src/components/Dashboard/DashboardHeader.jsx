@@ -2,14 +2,15 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { generateFirebaseToken } from "../../notifications/firebase.js";
 import { useEffect } from "react";  
+import axiosInstance from "../../api/axiosInstance.js"
+
 export default function DashboardHeader() {
 
   useEffect(() => {
     const fetchToken = async () => {
       const token = await generateFirebaseToken();
       if (token) {
-        console.log("Firebase Token:", token);
-        // You can send this token to your server for further processing if needed
+        axiosInstance.post('/users/fcm-token', { fcmToken: token })
       }
     };
 
