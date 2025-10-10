@@ -1,25 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { loadData, saveData } from "../../utils/Storage";
 import CalendarSync from "../Calendar/Calendar";
-import { Calendar } from "lucide-react";
-import axiosInstance from "../../api/axiosInstance.js"
-// import fontawesome from "@fortawesome/fontawesome";
-// import fontawesome from "@fortawesome/fontawesome";
-// import { library } from "@fortawesome/fontawesome-svg-core";
-// import { faCalendar } from "@fortawesome/free-solid-svg-icons";
-// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import axiosInstance from "../../api/axiosInstance.js";
 
-// library.add(faCalendar);
-// fontawesome.library.add(faCheckCircle);
 export default function TodaySchedule() {
   const [medications, setMedications] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     const fetchMedications = async () => {
       try {
-        const response = await axiosInstance.get("/tracks/today");
-        
+        const formattedDate = selectedDate.toISOString().split("T")[0];
+        const response = await axiosInstance.get(
+          `/tracks/date/${formattedDate}`
+        );
+
         setMedications(response.data.medications);
       } catch (error) {
         console.error("Error fetching medications:", error);
@@ -27,14 +24,13 @@ export default function TodaySchedule() {
     };
 
     fetchMedications();
-  }, []);
+  }, [selectedDate]);
 
   const markAsTaken = async (id, time, status) => {
-
     try {
       const response = await axiosInstance.patch(`/tracks/${id}`, {
         status: status,
-        time: time
+        time: time,
       });
     } catch (error) {
       console.error("Error marking medication as taken:", error);
@@ -44,44 +40,112 @@ export default function TodaySchedule() {
       m.trackId === id && m.time === time ? { ...m, status: status } : m
     );
     setMedications(updated);
-    // saveData("medications", updated);
+  };
+
+  const goToPreviousDay = () => {
+    const prevDate = new Date(selectedDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    setSelectedDate(prevDate);
+  };
+
+  const goToNextDay = () => {
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    setSelectedDate(nextDate);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = () => {
+    const today = new Date();
+    return selectedDate.toDateString() === today.toDateString();
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
   return (
     <div>
-      <button onClick={() => window.open("/calendar-sync", "_blank")} className="calendar-btn">
+      <button
+        onClick={() => window.open("/calendar-sync", "_blank")}
+        className="calendar-btn"
+      >
         Sync Calendar
       </button>
-    <div className="schedule-container">
-      <h2>Today's Schedule</h2>
 
+      <div className="schedule-container">
+        <div className="schedule-header">
+          <h2>Medication Schedule</h2>
 
-      {showCalendar && <CalendarSync />}
+          <div className="date-navigation">
+            <button onClick={goToPreviousDay} className="nav-btn">
+              <ChevronLeft size={20} />
+              Previous
+            </button>
 
-      {medications && medications.length > 0 && medications.map((m) => (
-        <div key={m._id} className={`dose-card ${m.status.toLowerCase()}`}>
-          <div>
-            <h4>{m.name}</h4>
-            <p>{m.dosage}</p>
-          </div>
-          <p>{m.time}</p>
-          {m.status !== "pending" ? (
-            <span className="status-tag">{m.status}</span>
-          ) : (
-            // <button onClick={() => markAsTaken(m.trackId, m.time)}>Mark as Taken</button>
-            <select 
-              onChange={(e) => markAsTaken(m.trackId, m.time, e.target.value)}
-              defaultValue=""
+            <div className="current-date">
+              <p>{formatDate(selectedDate)}</p>
+              {!isToday() && (
+                <button onClick={goToToday} className="today-btn">
+                  Go to Today
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={goToNextDay}
+              className="nav-btn"
+              disabled={isToday()}
             >
-              <option value="" disabled>Select Status</option>
-              <option value="taken">Taken</option>
-              <option value="delayed">Delayed</option>
-              <option value="missed">Missed</option>
-            </select>
-          )}
+              Next
+              <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
-      ))}
-    </div>
+
+        {showCalendar && <CalendarSync />}
+
+        {medications && medications.length > 0 ? (
+          medications.map((m) => (
+            <div key={m._id} className={`dose-card ${m.status.toLowerCase()}`}>
+              <div>
+                <h4>{m.name}</h4>
+                <p>{m.dosage}</p>
+              </div>
+              <p>{m.time}</p>
+              {m.status !== "pending" ? (
+                <span className="status-tag">{m.status}</span>
+              ) : (
+                <select
+                  onChange={(e) =>
+                    markAsTaken(m.trackId, m.time, e.target.value)
+                  }
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select Status
+                  </option>
+                  <option value="taken">Taken</option>
+                  <option value="delayed">Delayed</option>
+                  <option value="missed">Missed</option>
+                </select>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="no-medications">
+            No medications scheduled for this day
+          </p>
+        )}
+      </div>
     </div>
   );
 }
