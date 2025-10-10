@@ -65,13 +65,19 @@
 /* Add Card */
 .add-card {
     padding: 2rem;
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     position: sticky;
     top: 2rem;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    background-color: rgb(248, 243, 243);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    transition: all 0.3s ease;
+}
+
+.add-card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .add-header {
@@ -84,12 +90,12 @@
 .add-icon {
     width: 2.5rem;
     height: 2.5rem;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #265ae0, #10b981);
     border-radius: 0.75rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .add-title {
@@ -112,13 +118,25 @@
 }
 
 /* Enhanced Input Styling */
-.add-form input,
-.add-form .select-input {
+.add-form input {
     width: 100%;
     padding: 0.75rem 1rem;
     border: 2px solid var(--border);
     border-radius: 8px;
-    background-color: var(--background);
+    background-color:whitesmoke;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.add-form .select-input {
+    width: 106%;
+    min-width: 200px;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background-color:whitesmoke;
     color: var(--foreground);
     font-size: 0.875rem;
     transition: all 0.2s ease;
@@ -128,7 +146,7 @@
 .add-form input:focus,
 .add-form .select-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: #04053f;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
 }
@@ -136,6 +154,7 @@
 .add-form input:hover,
 .add-form .select-input:hover {
     border-color: var(--muted-foreground);
+    background-color: #acaeaf;
 }
 
 .add-form input::placeholder {
@@ -149,11 +168,14 @@
     gap: 8px;
     margin-bottom: 8px;
     align-items: center;
+    width: 106%;
 }
 
 .timing-input-group input {
     flex: 1;
     margin-bottom: 0;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Button Styling */
@@ -161,7 +183,7 @@
     width: 100%;
     margin-top: 1.5rem;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #265ae0, #10b981);
     border: none;
     border-radius: 8px;
     color: white;
@@ -238,15 +260,22 @@
 
 /* List Section */
 .list-container {
+    background-color: rgb(247, 239, 239);
+    border-radius: 15px;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
 
 .list-title {
+    background: linear-gradient(to right, #0c0c17, #111014, #110d0f);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--foreground);
+    padding: 1rem 0;
+    margin: 0;
+    display: inline-block;
 }
 
 /* Empty State */
@@ -279,19 +308,22 @@
 
 /* Medication Cards */
 .med-card {
-    padding: 1.5rem;
+    padding: 1rem;
     box-shadow: var(--shadow-soft);
     transition: all 0.3s ease;
     animation: fadeIn 0.4s ease forwards;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #edeeef 0%, #b9bfc3 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    max-width: 100%;
+    margin-bottom: 0.05rem;
 }
 
 .med-card:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.2);
+    border-color: rgba(245, 245, 250, 0.4);
+    background: linear-gradient(135deg, #ddd6fe 0%, #b3b6c0 100%);
 }
 
 .med-item {
@@ -309,12 +341,12 @@
 .med-icon {
     width: 3rem;
     height: 3rem;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #265ae0, #10b981);
     border-radius: 0.75rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .med-name {
@@ -380,6 +412,7 @@
 }
 
 /* Responsive Design */
+
 @media (max-width: 768px) {
     .medications-main {
         padding: 1rem;
@@ -387,6 +420,8 @@
     
     .add-card {
         padding: 1.5rem;
+        position: relative;
+        top: 0;
     }
     
     .med-card {
@@ -401,6 +436,29 @@
     .med-actions {
         align-self: flex-end;
     }
+
+    .timing-input-group {
+        width: 100%;
+    }
+
+    .add-form .select-input {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .add-card {
+        padding: 1rem;
+    }
+
+    .header-text {
+        font-size: 1.25rem;
+    }
+
+    .add-title {
+        color: #3f8c72;
+        font-size: 1.1rem;
+    }
 }
 
 /* Focus visible for accessibility */
@@ -409,4 +467,23 @@ input:focus-visible,
 select:focus-visible {
     outline: 2px solid #6366f1;
     outline-offset: 2px;
+}
+.calendar-btn {
+    background: linear-gradient(135deg, #265ae0, #10b981);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+    float: right;
+    margin-bottom: 1rem;
+}
+
+.calendar-btn:hover {
+    background: linear-gradient(135deg, #1e4dd8, #0d9668);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(16, 185, 129, 0.4);
 }

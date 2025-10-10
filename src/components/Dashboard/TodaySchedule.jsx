@@ -48,11 +48,13 @@ export default function TodaySchedule() {
   };
 
   return (
-    <div className="schedule-container">
-      <h2>Today's Schedule</h2>
+    <div>
       <button onClick={() => window.open("/calendar-sync", "_blank")} className="calendar-btn">
         Sync Calendar
       </button>
+    <div className="schedule-container">
+      <h2>Today's Schedule</h2>
+
 
       {showCalendar && <CalendarSync />}
 
@@ -79,6 +81,7 @@ export default function TodaySchedule() {
           )}
         </div>
       ))}
+    </div>
     </div>
   );
 }

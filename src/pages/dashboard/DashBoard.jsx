@@ -9,15 +9,18 @@ import "../../components/Dashboard/Dashboard.css";
 
 export default function Dashboard() {
   return (
-    <>
-      <Login />
-      <div className="dashboard">
+    <div style={{ display: 'flex', position: 'relative' }}>
+      <div style={{ position: 'fixed', right: '1rem', top: '1rem', zIndex: 1000, transform: 'scale(1.8)', transformOrigin: 'top right' }}>
+        <Login />
+      </div>
+      
+      <div className="dashboard" style={{ width: '100%' }}>
         <DashboardHeader />
         <AdherenceStats/>
         <TodaySchedule />
         <RecentActivity />
         <AIHealthAssistant />
       </div>
-    </>
+    </div>
   );
 }

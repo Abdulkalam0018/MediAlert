@@ -129,11 +129,13 @@ const Medications = () => {
               <Pill className="header-pill" />
             </div>
             <h1 className="header-text">My Medications</h1>
-          </div>
+          </div >
+          <div className="calendar-btn">
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
+          </div>
         </div>
       </header>
 
@@ -144,9 +146,9 @@ const Medications = () => {
           <Card className="add-card">
             <div className="add-header">
               <div className="add-icon">
-                <Plus className="w-5 h-5 text-primary-foreground" />
+                <Plus className="w-5 h-5" style={{ color: 'white' }} />
               </div>
-              <h2 className="add-title">Add Medication</h2>
+              <h2 className="add-title" >Add Medication</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="add-form">
@@ -192,7 +194,8 @@ const Medications = () => {
 
               <div className="form-group">
                 <Label>Timings *</Label>
-                {formData.timings.map((timing, index) => (
+                {
+                  formData.timings.map((timing, index) => (
                   <div key={index} className="timing-input-group" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                     <Input
                       type="time"
@@ -206,11 +209,13 @@ const Medications = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveTiming(index)}
-                        style={{ flexShrink: 0 }}
+                        style={{ flexShrink: 0}}
+                        className="remove-timing-btn"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="select-input" />
                       </Button>
-                    )}
+                    )
+                  }
                   </div>
                 ))}
                 <Button
@@ -257,7 +262,7 @@ const Medications = () => {
                     <div className="med-item">
                       <div className="med-left">
                         <div className="med-icon">
-                          <Pill className="w-6 h-6 text-primary-foreground" />
+                          <Pill className="w-6 h-6" style={{ color: 'white' }} />
                         </div>
                         <div>
                           <h3 className="med-name">{med.name}</h3>

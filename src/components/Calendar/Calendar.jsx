@@ -87,11 +87,12 @@ export default function CalendarSync() {
               onClick={() =>
                 window.open("https://calendar.google.com", "_blank")
               }
+              className="btn-icon"
             >
-              <ExternalLink className="btn-icon" />
+              <ExternalLink/>
               View Calendar
             </button>
-            <button onClick={handleDisconnect}>Disconnect</button>
+            <button onClick={handleDisconnect} className="btn-icon">Disconnect</button>
           </div>
         </div>
       )}
