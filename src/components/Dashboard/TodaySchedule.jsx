@@ -120,7 +120,17 @@ export default function TodaySchedule() {
                 <h4>{m.name}</h4>
                 <p>{m.dosage}</p>
               </div>
-              <p>{m.time}</p>
+
+              <p
+                style={{
+                  color: "#2b6ef2",
+                  fontWeight: "bold",
+                  margin: "0 0 0.3rem 0",
+                }}
+              >
+                {m.time}
+              </p>
+
               {m.status !== "pending" ? (
                 <span className="status-tag">{m.status}</span>
               ) : (
