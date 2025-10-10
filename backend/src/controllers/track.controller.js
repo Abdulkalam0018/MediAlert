@@ -343,5 +343,7 @@ export {
     getTrackById,
     getTracksByDate,
     updateTrackTimingStatus,
-    getAdherenceData
+    getAdherenceData,
+    createTracksForDate,
+    transformTracksToTimings
 };
