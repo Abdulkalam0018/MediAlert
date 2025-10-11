@@ -1,0 +1,9 @@
+<svg width="200" height="200" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="helixGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8b5cf6; stop-opacity:1" /> <stop offset="100%" style="stop-color:#3b82f6; stop-opacity:1" /> </linearGradient>
+  </defs>
+  
+  <path fill="url(#helixGradient)" d="M50,95 C20,90 10,65 25,45 C35,32 40,32 50,40 C60,32 65,32 75,45 C90,65 80,90 50,95 Z M27,48 C15,65 22,85 50,90 C78,85 85,65 73,48 C67,39 60,39 50,50 C40,39 33,39 27,48 Z" />
+
+</svg>

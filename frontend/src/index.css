@@ -1,0 +1,15 @@
+@layer base {
+    body {
+        @apply bg-background text-foreground;
+        background-image: url('/background-ligh.png');
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+        transition: background 0.5s ease;
+    }
+
+    .dark body {
+        background-image: none;
+        background-color: hsl(var(--background));
+    }
+}
