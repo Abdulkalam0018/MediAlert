@@ -5,7 +5,9 @@ import dayjs from "dayjs";
 import { google } from 'googleapis';
 
 const processElixirsAndGenerateTracks = async (elixirs) => {
-  const today = dayjs().startOf("day").toDate();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
   let tracksCreated = 0;
 
   for (const elixir of elixirs) {
@@ -16,24 +18,42 @@ const processElixirsAndGenerateTracks = async (elixirs) => {
         .lean();
   
       // determine from which date to start generating
-      let startDate = elixir.startDate;
+      let startDate = new Date(elixir.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      
       if (lastTrack) {
-        const nextDate = dayjs(lastTrack.scheduledDate).add(1, "day").toDate();
+        const nextDate = new Date(lastTrack.scheduledDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+        nextDate.setHours(0, 0, 0, 0);
         if (nextDate > today) continue; // already up to date
         startDate = nextDate;
       }
   
+      const elixirStartDate = new Date(elixir.startDate);
+      elixirStartDate.setHours(0, 0, 0, 0);
+      
       // create tracks up to today
       const datesToGenerate = [];
-      for (let d = dayjs(startDate); d.isBefore(dayjs(today)) || d.isSame(today); d = d.add(1, "day")) {
-        if (d.toDate() > elixir.endDate) break;
+      for (let currentDate = new Date(startDate); currentDate <= today; currentDate.setDate(currentDate.getDate() + 1)) {
+        const checkDate = new Date(currentDate);
+        checkDate.setHours(0, 0, 0, 0);
+        
+        // Check if date exceeds end date
+        if (checkDate > elixir.endDate) break;
   
-        if (elixir.frequency === "Alternate" && d.diff(dayjs(elixir.startDate), "day") % 2 !== 0) continue;
-        if (elixir.frequency === "Every3Days" && d.diff(dayjs(elixir.startDate), "day") % 3 !== 0) continue;
-        if (elixir.frequency === "Weekly" && d.diff(dayjs(elixir.startDate), "week") % 1 !== 0) continue;
-        if (elixir.frequency === "Monthly" && d.date() !== dayjs(elixir.startDate).date()) continue;
+        // Calculate days difference from elixir start date
+        const daysDiff = Math.floor((checkDate - elixirStartDate) / (1000 * 60 * 60 * 24));
+        
+        // Frequency-based filtering (same logic as createTracksForDate)
+        if (elixir.frequency === "Alternate" && daysDiff % 2 !== 0) continue;
+        if (elixir.frequency === "Every3Days" && daysDiff % 3 !== 0) continue;
+        if (elixir.frequency === "Weekly") {
+          const weeksDiff = Math.floor(daysDiff / 7);
+          if (weeksDiff % 1 !== 0 || checkDate.getDay() !== elixirStartDate.getDay()) continue;
+        }
+        if (elixir.frequency === "Monthly" && checkDate.getDate() !== elixirStartDate.getDate()) continue;
   
-        datesToGenerate.push(d.toDate());
+        datesToGenerate.push(new Date(checkDate));
       }
   
       const tracks = datesToGenerate.map((scheduledDate) => ({
@@ -81,7 +101,7 @@ const generateDailyTracks = async () => {
   }
 };
 
-const generateDailyTracksOfUser = async (userId) => {
+const generateDailyTracksOfUser = async (userId) => { 
   const today = dayjs().startOf("day").toDate();
 
   try {

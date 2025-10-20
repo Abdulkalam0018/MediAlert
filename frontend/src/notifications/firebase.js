@@ -15,16 +15,16 @@ const app = initializeApp(firebaseConfig);
 export const messaging = getMessaging(app);
 
 // Register Service Worker for background notifications
-// if ('serviceWorker' in navigator) {
-//   navigator.serviceWorker
-//     .register('/firebase-messaging-sw.js')
-//     .then(() => {
-//       console.log('Service Worker registered successfully:');
-//     })
-//     .catch((error) => {
-//       console.error('Service Worker registration failed:', error);
-//     });
-// }
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/firebase-messaging-sw.js')
+    .then(() => {
+      console.log('Service Worker registered successfully:');
+    })
+    .catch((error) => {
+      console.error('Service Worker registration failed:', error);
+    });
+}
 
 export const generateFirebaseToken = async () => {
   try {

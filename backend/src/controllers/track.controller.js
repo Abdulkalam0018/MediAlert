@@ -36,7 +36,8 @@ const transformTracksToTimings = (tracks) => {
 };
 
 const createTracksForDate = async (userId, scheduledDate) => {
-    const elixirs = await Elixir.find({ userId });
+
+    const elixirs = await Elixir.find({ userId, status: "active" });
     if (elixirs.length === 0) {
         return { success: false, message: "No elixirs found for the user. Please add elixirs first." };
     }
@@ -44,7 +45,39 @@ const createTracksForDate = async (userId, scheduledDate) => {
     let createdTracks = [];
 
     for (const elixir of elixirs) {
-        const existingTrack = await Track.findOne({ elixirId: elixir._id, scheduledDate });
+        // Normalize dates for comparison
+        const checkDate = new Date(scheduledDate);
+        checkDate.setHours(0, 0, 0, 0);
+        
+        const elixirStart = new Date(elixir.startDate);
+        elixirStart.setHours(0, 0, 0, 0);
+        
+        const elixirEnd = new Date(elixir.endDate);
+        elixirEnd.setHours(0, 0, 0, 0);
+        
+        if (checkDate > elixirEnd || checkDate < elixirStart) continue;
+        
+        // Frequency-based filtering
+        const daysDiff = Math.floor((checkDate - elixirStart) / (1000 * 60 * 60 * 24));
+        
+        if (elixir.frequency === "Alternate" && daysDiff % 2 !== 0) continue;
+        if (elixir.frequency === "Every3Days" && daysDiff % 3 !== 0) continue;
+        if (elixir.frequency === "Weekly") {
+            const weeksDiff = Math.floor(daysDiff / 7);
+            if (weeksDiff % 1 !== 0 || checkDate.getDay() !== elixirStart.getDay()) continue;
+        }
+        if (elixir.frequency === "Monthly" && checkDate.getDate() !== elixirStart.getDate()) continue;
+        
+        // Check for existing track
+        const startOfDay = new Date(scheduledDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(scheduledDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const existingTrack = await Track.findOne({ 
+            elixirId: elixir._id, 
+            scheduledDate: { $gte: startOfDay, $lt: endOfDay } 
+        });
 
         if (existingTrack) {
             continue; // Skip if track already exists
@@ -55,7 +88,7 @@ const createTracksForDate = async (userId, scheduledDate) => {
         const newTrack = new Track({
             userId,
             elixirId: elixir._id,
-            scheduledDate,
+            scheduledDate: startOfDay, 
             timings
         });
 
@@ -81,8 +114,8 @@ const sync = async (req, res) => {
         
         if(!scheduledDate) {
             scheduledDate = new Date();
-            scheduledDate.setHours(0, 0, 0, 0);
         }
+        scheduledDate.setHours(0, 0, 0, 0);
 
         const result = await createTracksForDate(_id, scheduledDate);
         
@@ -156,11 +189,12 @@ const getTracksByDate = async (req, res) => {
 
         let requestedDate = dateParam ? new Date(dateParam) : new Date();
         requestedDate.setHours(0, 0, 0, 0);
+        
         let nextDate = new Date(requestedDate);
         nextDate.setDate(nextDate.getDate() + 1);
         nextDate.setHours(0, 0, 0, 0);
 
-        // Create tracks for today if they don't exist
+        // Create tracks for the requested date if they don't exist
         await createTracksForDate(_id, requestedDate);
 
         const tracks = await Track.find({ 
@@ -182,7 +216,7 @@ const getTracksByDate = async (req, res) => {
 
         return res.status(200).json({ medications });
     } catch (error) {
-        console.error("Error fetching today's tracks:", error);
+        console.error("Error fetching tracks by date:", error);
         return res.status(500).json({ message: "Internal server error." });
     }
 };
@@ -252,13 +286,16 @@ const getAdherenceData = async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        tracks.map(track => {
+        tracks.forEach(track => {
             totalDoses += track.timings.length;
             takenDoses += track.timings.filter(t => t.status === "taken").length;
             missedDoses += track.timings.filter(t => t.status === "missed").length;
             delayedDoses += track.timings.filter(t => t.status === "delayed").length;
 
-            if (track.scheduledDate.getDate() === today.getDate()) {
+            const trackDate = new Date(track.scheduledDate);
+            trackDate.setHours(0, 0, 0, 0);
+            
+            if (trackDate.getTime() === today.getTime()) {
                 todaysTotalDoses += track.timings.length;
                 todaysTakenDoses += track.timings.filter(t => t.status === "taken").length;
                 todaysMissedDoses += track.timings.filter(t => t.status === "missed").length;
@@ -298,11 +335,18 @@ const calculateAdherenceStreak = (tracks, fromDate) => {
         return 0;
     }
 
+    // Normalize fromDate
+    const normalizedFromDate = new Date(fromDate);
+    normalizedFromDate.setHours(0, 0, 0, 0);
+
     let lastNonAdherentDate = null;
     
     for (const track of tracks) {
+        const trackDate = new Date(track.scheduledDate);
+        trackDate.setHours(0, 0, 0, 0);
+        
         // Skip today's tracks and any future tracks
-        if (track.scheduledDate >= fromDate) {
+        if (trackDate >= normalizedFromDate) {
             continue;
         }
         
@@ -312,7 +356,7 @@ const calculateAdherenceStreak = (tracks, fromDate) => {
         );
         
         if (hasNonAdherentTiming) {
-            lastNonAdherentDate = track.scheduledDate;
+            lastNonAdherentDate = trackDate;
             break;
         }
     }
@@ -320,18 +364,26 @@ const calculateAdherenceStreak = (tracks, fromDate) => {
     // If no non-adherent date found, streak goes back to the earliest track
     if (!lastNonAdherentDate) {
         const earliestTrack = tracks[tracks.length - 1];
-        if (!earliestTrack || earliestTrack.scheduledDate.toDateString() === fromDate.toDateString()) {
+        if (!earliestTrack) {
             return 0;
         }
+        
+        const earliestDate = new Date(earliestTrack.scheduledDate);
+        earliestDate.setHours(0, 0, 0, 0);
+        
+        if (earliestDate.getTime() === normalizedFromDate.getTime()) {
+            return 0;
+        }
+        
         // Calculate days from earliest track to yesterday
-        const yesterday = new Date(fromDate);
+        const yesterday = new Date(normalizedFromDate);
         yesterday.setDate(yesterday.getDate() - 1);
-        const timeDiff = yesterday.getTime() - earliestTrack.scheduledDate.getTime();
+        const timeDiff = yesterday.getTime() - earliestDate.getTime();
         return Math.floor(timeDiff / (1000 * 3600 * 24)) + 1;
     }
     
     // Calculate days between last non-adherent date and yesterday
-    const yesterday = new Date(fromDate);
+    const yesterday = new Date(normalizedFromDate);
     yesterday.setDate(yesterday.getDate() - 1);
     const timeDiff = yesterday.getTime() - lastNonAdherentDate.getTime();
     return Math.floor(timeDiff / (1000 * 3600 * 24));
