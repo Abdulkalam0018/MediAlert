@@ -16,24 +16,29 @@ const scope = [
 ];
 
 const redirectToGoogle = (req, res) => {
+    const { userId } = req.params
+    
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline', // important to get refresh token
         prompt: 'consent',
-        scope: scope
+        scope: scope,
+        state: userId
     });
     res.redirect(authUrl);
 };
 
 const handleGoogleCallback = async (req, res) => {
-    console.log("Its working till google conroller handle callback", req.query);
+    // console.log("Its working till google conroller handle callback");
     
     const code = req.query.code;
+    let userId = req.query.state || getAuth(req).userId;
+
     if (!code) return res.status(400).json({ error: 'No code provided' });
 
     try {
         const { tokens } = await oauth2Client.getToken(code);
 
-        const updatedUser = await User.findOneAndUpdate({ clerkId: getAuth(req).userId }, 
+        const updatedUser = await User.findOneAndUpdate({ clerkId: userId }, 
         {
             googleTokens: {
                 access_token: tokens.access_token,

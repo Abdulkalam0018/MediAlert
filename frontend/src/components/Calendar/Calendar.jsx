@@ -9,11 +9,13 @@ import "./Calendar.css";
 export default function CalendarSync() {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState('')
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const response = await axiosInstance.get("/users/me");        
+        setUserId(response.data?.user?.clerkId);
         setIsConnected(response.data?.user?.allowCalendarSync || false);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -25,7 +27,7 @@ export default function CalendarSync() {
 
   const handleDisconnect = async () => {
     try {
-      const response = await axiosInstance.get("/google/disconnect");
+      const response = await axiosInstance.post("/google/disconnect");
       setIsConnected(response.data?.allowCalendarSync || false);
     } catch (error) {
       console.error("Error fetching user data:", error);  
@@ -66,7 +68,7 @@ export default function CalendarSync() {
 
           <button
             className="connect-btn"
-            onClick={() => window.location.href = 'http://localhost:8000/api/v1/google/auth'}
+            onClick={() => window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}`}
             disabled={isLoading}
           >
             {isLoading ? "Connecting..." : "Connect & Sync Calendar"}

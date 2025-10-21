@@ -6,6 +6,7 @@ const elixirSchema = new Schema(
         userId: {
             type: Schema.Types.ObjectId,
             ref: "User",
+            required: true,
         },
         name: {
             type: String,
@@ -30,11 +31,35 @@ const elixirSchema = new Schema(
         },
         startDate: { 
             type: Date, 
-            required: true 
+            required: true,
+            validate: {
+                validator: function (value) {
+                    const createdAt = this.createdAt || new Date();
+                    const minAllowed = new Date(createdAt.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    return value >= minAllowed;
+                },
+                message: "Start date cannot be more than 30 days before creation date.",
+            },
         },
-        endDate: { 
-            type: Date, 
-            required: true 
+        endDate: {
+            type: Date,
+            required: true,
+            validate: [
+                {
+                    validator: function (value) {
+                        const maxAllowed = new Date();
+                        maxAllowed.setFullYear(maxAllowed.getFullYear() + 1);
+                        return value <= maxAllowed;
+                    },
+                    message: "End date cannot be more than 1 year from today.",
+                },
+                {
+                    validator: function (value) {
+                        return !this.startDate || value > this.startDate;
+                    },
+                    message: "End date must be after start date.",
+                },
+            ],
         }, // ask on frontend for how many days to take the elixir
         remindersEnabled: {
             type: Boolean,

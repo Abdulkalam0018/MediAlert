@@ -11,7 +11,7 @@ import {
 const router = Router();
 
 // OAuth routes
-router.get("/auth", redirectToGoogle);
+router.get("/auth/:userId", redirectToGoogle);
 router.get("/auth/google/callback", handleGoogleCallback);
 
 // Calendar management routes
