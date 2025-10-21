@@ -5,7 +5,7 @@ const runCalendarSyncJob = async (source = "manual") => {
   console.log(`[${new Date().toISOString()}] Running syncCalendarForAllUsers (triggered by: ${source})`);
   try {
     const result = await syncCalendarForAllUsers();
-    console.log(`[${new Date().toISOString()}] Calendar sync completed:`, result);
+    console.log(`[${new Date().toISOString()}] Calendar sync completed:`);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in calendar sync job:`, error);
   }

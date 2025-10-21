@@ -16,16 +16,13 @@ connectDB()
 
     // background jobs
     import('./jobs/track.job.js')
-      .then(() => console.log("Track cron job started"))
       .catch(err => console.error("❌ Failed to start track cron job:", err))
     
     import('./jobs/calendar.job.js')
-      .then(() => console.log("Calendar cron job started"))
       .catch(err => console.error("❌ Failed to start calendar cron job:", err))
 
     import('./jobs/alert.job.js')
-        .then(() => console.log("Alert cron job started"))
-        .catch(err => console.error("❌ Failed to start alert cron job:", err))
+      .catch(err => console.error("❌ Failed to start alert cron job:", err))
 })
 .catch((error) => {
     console.error("Connection error in DB", error);

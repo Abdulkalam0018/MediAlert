@@ -1,7 +1,6 @@
-import React from "react";
 import Login from "../../components/Login.jsx"
-import DashboardHeader from "../../components/dashboard/DashboardHeader";
-import AdherenceStats from "../../components/dashboard/AdherenceStats";
+import DashboardHeader from "../../components/Dashboard/DashboardHeader";
+import AdherenceStats from "../../components/Dashboard/AdherenceStats";
 import TodaySchedule from "../../components/Dashboard/TodaySchedule";
 import AIHealthAssistant from "../../components/Dashboard/AIHealthAssistant";
 import "../../components/Dashboard/Dashboard.css";

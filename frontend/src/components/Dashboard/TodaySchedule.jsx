@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { loadData, saveData } from "../../utils/Storage";
+import { useEffect, useState } from "react";
 import CalendarSync from "../Calendar/Calendar";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "../../api/axiosInstance.js";
 
 export default function TodaySchedule() {
@@ -13,6 +12,7 @@ export default function TodaySchedule() {
     const fetchMedications = async () => {
       try {
         const formattedDate = selectedDate.toISOString().split("T")[0];
+        // const testing = await axiosInstance.get(`/users/test`);
         const response = await axiosInstance.get(
           `/tracks/date/${formattedDate}`
         );

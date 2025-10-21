@@ -83,7 +83,7 @@ const processElixirsAndGenerateTracks = async (elixirs) => {
  * based on elixir schedules and frequencies
  */
 const generateDailyTracks = async () => {
-  console.log(`🔄 Running daily track generation job at ${new Date().toLocaleString()}`);
+  // console.log(`🔄 Running daily track generation job at ${new Date().toLocaleString()}`);
   const today = dayjs().startOf("day").toDate();
 
   try {
@@ -94,7 +94,7 @@ const generateDailyTracks = async () => {
 
     const tracksCreated = await processElixirsAndGenerateTracks(activeElixirs);
     
-    console.log(`✅ Daily track generation done at ${new Date().toLocaleString()}. Created ${tracksCreated} tracks.`);
+    // console.log(`✅ Daily track generation done at ${new Date().toLocaleString()}. Created ${tracksCreated} tracks.`);
   } catch (error) {
     console.error("Error in generateDailyTracks:", error);
     throw error;
@@ -336,7 +336,7 @@ const syncCalendarForUser = async (userId) => {
  * Syncs calendar for all eligible users
  */
 const syncCalendarForAllUsers = async () => {
-  console.log(`🔄 Running calendar sync for all users at ${new Date().toLocaleString()}`);
+  // console.log(`🔄 Running calendar sync for all users at ${new Date().toLocaleString()}`);
   
   try {
     // Find all users with calendar sync enabled and Google tokens
@@ -375,7 +375,7 @@ const syncCalendarForAllUsers = async () => {
       }
     }
 
-    console.log(`✅ Calendar sync completed for all users. Users: ${usersProcessed}, Events created: ${totalEventsCreated}, Failed: ${totalEventsFailed}`);
+    // console.log(`✅ Calendar sync completed for all users. Users: ${usersProcessed}, Events created: ${totalEventsCreated}, Failed: ${totalEventsFailed}`);
     
     return {
       usersProcessed,

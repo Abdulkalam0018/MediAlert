@@ -67,7 +67,7 @@ export const generateProactiveAlerts = async () => {
             elixirId: elixir._id.toString(),
           });
         }
-        console.log(`Proactive alert sent to ${user.name} for ${elixir.name}`);
+        // console.log(`Proactive alert sent to ${user.name} for ${elixir.name}`);
       }
     }
   } catch (error) {
