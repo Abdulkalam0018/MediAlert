@@ -232,7 +232,7 @@ const updateTrackTimingStatus = async (req, res) => {
             return res.status(404).json({ message: "Track not found or does not belong to the user." });
         }
 
-        const timingEntry = track.timings.find(t => t.time === time);
+        const timingEntry = track.timings.find(t => t.time.getTime() === new Date(time).getTime());
         if (!timingEntry) {
             return res.status(404).json({ message: "Timing entry not found for the specified time." });
         }

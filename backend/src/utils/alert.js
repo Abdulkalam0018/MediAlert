@@ -36,7 +36,7 @@ export const generateProactiveAlerts = async () => {
   
       // baseline prediction
       let probability = 0.3 + missRate; // start with user’s miss rate
-      if (track.timings.some(t => t.getHours() >= 18)) {
+      if (track.timings.some(t => t.time.getHours() >= 18)) {
         probability += 0.1; // evening doses harder to remember
       }
   
