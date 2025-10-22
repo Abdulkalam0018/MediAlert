@@ -128,7 +128,7 @@ export default function TodaySchedule() {
                   margin: "0 0 0.3rem 0",
                 }}
               >
-                {m.time}
+                {new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
 
               {m.status !== "pending" ? (

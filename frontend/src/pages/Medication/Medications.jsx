@@ -189,6 +189,7 @@ const Medications = () => {
                   <option value="Daily">Daily</option>
                   <option value="Alternate">Alternate</option>
                   <option value="Weekly">Weekly</option>
+                  <option value="Monthly">Monthly</option>
                 </select>
               </div>
 
@@ -279,7 +280,7 @@ const Medications = () => {
                                   <b>Timings:</b>{" "}
                                   {med.timings.map((time, index) => (
                                     <span key={index}>
-                                      {time}
+                                      {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                       {index < med.timings.length - 1 && ", "}
                                     </span>
                                   ))}

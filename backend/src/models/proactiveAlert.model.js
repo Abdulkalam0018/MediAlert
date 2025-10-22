@@ -23,7 +23,7 @@ const proactiveAlertSchema = new Schema(
       required: true,
     },
     timing: {
-      type: String, // e.g. "09:00"
+      type: Date, 
       required: true,
     },
     probabilityMissed: {

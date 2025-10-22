@@ -60,7 +60,7 @@ const processElixirsAndGenerateTracks = async (elixirs) => {
         userId: elixir.userId,
         elixirId: elixir._id,
         scheduledDate,
-        timings: elixir.timings.map(time => ({ time }))
+        timings: elixir.timings.map(time => ({ time: time.setDate(scheduledDate.getDate()) }))
       }));
   
       if (tracks.length) {
@@ -196,18 +196,13 @@ const processTracksAndSyncToCalendar = async (tracks, user) => {
         }
 
         try {
-          // Parse time (e.g., "09:00" or "14:30")
-          const [hours, minutes] = timing.time.split(':').map(Number);
           
           // Create start time by combining scheduled date with timing
-          const startDateTime = dayjs(track.scheduledDate)
-            .hour(hours)
-            .minute(minutes)
-            .second(0)
-            .millisecond(0);
+          const startDateTime = timing.time
           
           // End time is 30 minutes after start (for medication taking)
-          const endDateTime = startDateTime.add(30, 'minute');
+          const endDateTime = new Date(startDateTime);
+          endDateTime.setMinutes(endDateTime.getMinutes() + 30);
 
           // Create calendar event
           const event = {

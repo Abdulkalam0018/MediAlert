@@ -21,7 +21,7 @@ const elixirSchema = new Schema(
             trim: true,
         },
         timings: { 
-            type: [String], // Array of time strings in 24-hour format (e.g., "09:00", "14:00")
+            type: [Date],
             required: true 
         },
         frequency: {

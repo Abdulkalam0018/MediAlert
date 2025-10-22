@@ -36,6 +36,17 @@ const addElixir = async (req, res) => {
             remindersEnabled = true;
         }
 
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        // modify timings to be Date objects on startDate
+        timings = timings.map(timeStr => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const timingDate = new Date(startDate);
+            timingDate.setHours(hours, minutes, 0, 0);
+            return timingDate;
+        });
+
         const newElixir = new Elixir({
             userId: _id,
             name,
@@ -95,12 +106,25 @@ const updateElixir = async (req, res) => {
             frequency = "Daily";
         }
 
-        if(startDate && isNaN(new Date(startDate).getTime())) { 
+        if(!startDate || isNaN(new Date(startDate).getTime())) { 
             startDate = elixir.startDate;
         }
 
-        if(endDate && isNaN(new Date(endDate).getTime())) { 
+        if(!endDate || isNaN(new Date(endDate).getTime())) { 
             endDate = elixir.endDate;
+        }
+
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        // modify timings to be Date objects on startDate
+        if(timings) {
+            timings = timings.map(timeStr => {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                const timingDate = new Date(startDate);
+                timingDate.setHours(hours, minutes, 0, 0);
+                return timingDate;
+            });
         }
 
         elixir.name = name || elixir.name;

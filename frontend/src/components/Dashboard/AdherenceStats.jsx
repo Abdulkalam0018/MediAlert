@@ -3,7 +3,17 @@ import axiosInstance from "../../api/axiosInstance.js";
 
 export default function AdherenceStats() {
   const [data, setData] = useState({
-    
+    activeMedications: 0,
+    adherenceRate: "0.00",
+    delayedDoses: 0,
+    missedDoses: 0,
+    streak: 0,
+    takenDoses: 0,
+    todaysDelayedDoses: 0,
+    todaysMissedDoses: 0,
+    todaysTakenDoses: 0, 
+    todaysTotalDoses: 0,
+    totalDoses: 0
   });
 
   useEffect(() => {

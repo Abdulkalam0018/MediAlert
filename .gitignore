@@ -25,4 +25,5 @@ build/
 *.ntvs*
 *.njsproj
 *.DS_Store
+.vite
 firebase-secret.json

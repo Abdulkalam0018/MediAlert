@@ -83,7 +83,7 @@ const createTracksForDate = async (userId, scheduledDate) => {
             continue; // Skip if track already exists
         }
 
-        const timings = elixir.timings.map(time => ({ time }));
+        const timings = elixir.timings.map(time => ({ time: time.setDate(scheduledDate.getDate()) }));
 
         const newTrack = new Track({
             userId,
@@ -205,13 +205,7 @@ const getTracksByDate = async (req, res) => {
         const medications = transformTracksToTimings(tracks);
 
         medications.sort((a, b) => {
-            // Convert time strings to minutes for proper comparison
-            const timeToMinutes = (timeStr) => {
-                const [hours, minutes] = timeStr.split(':').map(Number);
-                return hours * 60 + minutes;
-            };
-            
-            return timeToMinutes(a.time) - timeToMinutes(b.time);
+            return a.time > b.time ? 1 : -1;
         });
 
         return res.status(200).json({ medications });
