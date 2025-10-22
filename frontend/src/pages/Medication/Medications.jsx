@@ -65,7 +65,13 @@ const Medications = () => {
     
     // Filter out empty timings
     
-    const validTimings = formData.timings.filter(timing => timing.trim() !== "");
+    const validTimings = formData.timings.filter(timing => timing.trim() !== "").map(timing => {
+      // Convert time string (HH:MM) to a Date object for today
+      const [hours, minutes] = timing.split(":").map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    });    
     
     if (!formData.name || !formData.dosage || validTimings.length === 0) {
       toast({
