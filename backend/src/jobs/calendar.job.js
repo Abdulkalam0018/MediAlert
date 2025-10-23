@@ -11,8 +11,6 @@ const runCalendarSyncJob = async (source = "manual") => {
   }
 };
 
-// Run once immediately when the server starts/restarts
-runCalendarSyncJob("server_start");
 
 // Schedule calendar sync every 6 hours
 // Runs at 00:00, 06:00, 12:00, and 18:00

@@ -1,8 +1,9 @@
 import { google } from 'googleapis';
 import {User} from '../models/user.model.js'; 
 import { getAuth } from '@clerk/express';
-import { syncCalendarForUser } from '../utils/sync.js';
+import { deleteCalendarEvent, syncCalendarForUser } from '../utils/sync.js';
 import { getUserId } from '../utils/clerk.js';
+import { Track } from '../models/track.model.js';
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -206,6 +207,38 @@ const getCalendarStatus = async (req, res) => {
     }
 };
 
+/**
+ * Deletes a all calendar event from Google Calendar for a user
+ */
+const deleteAllCalendarEvents = async (req, res) => {
+  try {
+    const userId = await getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized: No user ID found' });
+    }
+
+    const tracks = await Track.find({ userId });
+
+    for (const track of tracks) {
+      for (const timing of track.timings) {
+        if (timing.calendarEventId) {
+          deleteCalendarEvent(timing.calendarEventId, userId); // Fire and forget
+          timing.calendarEventId = null; // Clear the event ID after deletion
+          timing.lastSyncedAt = null;
+          track.save(); // Fire and forget
+          // To avoid hitting rate limits
+          await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay between requests
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error deleting calendar events for user ${userId}:`, error.message);
+    return false;
+  }
+};
+
 export {
     redirectToGoogle,
     handleGoogleCallback,
@@ -214,4 +247,5 @@ export {
     disconnectCalendar,
     toggleCalendarSync,
     getCalendarStatus,
+    deleteAllCalendarEvents
 };

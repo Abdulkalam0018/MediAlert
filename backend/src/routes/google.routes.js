@@ -5,7 +5,8 @@ import {
     syncCalendar,
     disconnectCalendar,
     toggleCalendarSync,
-    getCalendarStatus
+    getCalendarStatus,
+    deleteAllCalendarEvents
 } from "../controllers/google.controller.js";
 
 const router = Router();
@@ -19,5 +20,6 @@ router.post("/sync", syncCalendar);
 router.post("/disconnect", disconnectCalendar);
 router.post("/toggle-sync", toggleCalendarSync);
 router.get("/status", getCalendarStatus);
+router.delete("/events", deleteAllCalendarEvents);
 
 export default router;

@@ -6,13 +6,17 @@ const runDailyTrackJob = async (source = "manual") => {
   try {
     await generateDailyTracks();
     console.log(`[${new Date().toISOString()}] Daily track generation completed successfully.`);
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error during daily track generation:`, error);
+  }
     
-    // After generating tracks, sync to calendar for all users
-    console.log(`[${new Date().toISOString()}] Starting calendar sync after track generation...`);
+  // After generating tracks, sync to calendar for all users
+  console.log(`[${new Date().toISOString()}] Starting calendar sync after track generation...`);
+  try {
     await syncCalendarForAllUsers();
     console.log(`[${new Date().toISOString()}] Calendar sync completed after track generation.`);
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Error in daily track generation job:`, error);
+    console.error(`[${new Date().toISOString()}] Error in calendar sync job:`, error);
   }
 };
 

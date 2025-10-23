@@ -155,6 +155,13 @@ const extendEndDate = async (req, res) => {
             return res.status(400).json({ message: "Invalid additionalDays value." });
         }
 
+        elixir.status = "active";
+
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        if (elixir.endDate < currentDate) {
+            elixir.endDate = currentDate;
+        }
         elixir.endDate.setDate(elixir.endDate.getDate() + additionalDays);
         await elixir.save();
 
