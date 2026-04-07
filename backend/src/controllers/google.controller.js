@@ -60,8 +60,8 @@ const handleGoogleCallback = async (req, res) => {
             console.error('Error during initial calendar sync:', err);
         });
 
-        // return res.status(200).json({ message: 'Google Calendar connected successfully' });
-        res.redirect(`${process.env.FRONTEND_URL}/calendar-sync?calendar=connected`);
+        // Send the user back to a guaranteed app route after OAuth completes.
+        res.redirect(`${process.env.FRONTEND_URL}/dashboard?calendar=connected`);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to exchange code for tokens' });
@@ -128,7 +128,12 @@ const disconnectCalendar = async (req, res) => {
         
         await user.save();
 
-        return res.status(200).json({ message: 'Google Calendar disconnected successfully' });
+        return res.status(200).json({
+            message: 'Google Calendar disconnected successfully',
+            isConnected: false,
+            allowCalendarSync: false,
+            lastCalendarSync: null,
+        });
     } catch (error) {
         console.error('Error in disconnectCalendar:', error);
         return res.status(500).json({ error: 'Failed to disconnect calendar', details: error.message });

@@ -1,34 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Calendar, CheckCircle2, ExternalLink, Info } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, ExternalLink, Info } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "../../api/axiosInstance.js";
+import useCalendarStatus from "../../hooks/useCalendarStatus.js";
 import "./Calendar.css";
 
 
 export default function CalendarSync() {
-  const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [userId, setUserId] = useState('')
+  const navigate = useNavigate();
+  const { userId } = useAuth();
+  const {
+    isCalendarConnected,
+    lastCalendarSync,
+    refreshCalendarStatus,
+  } = useCalendarStatus();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await axiosInstance.get("/users/me");        
-        setUserId(response.data?.user?.clerkId);
-        setIsConnected(response.data?.user?.allowCalendarSync || false);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
+  const formatLastSync = (value) => {
+    if (!value) return "Connected and waiting for the next sync.";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "Connected and waiting for the next sync.";
+    }
 
-    fetchUser();
-  }, []);
+    return `Last synced ${date.toLocaleString()}`;
+  };
 
   const handleDisconnect = async () => {
     try {
-      const response = await axiosInstance.post("/google/disconnect");
-      setIsConnected(response.data?.allowCalendarSync || false);
+      await axiosInstance.post("/google/disconnect");
+      await refreshCalendarStatus();
+      window.dispatchEvent(new CustomEvent("medialert:calendar-status"));
     } catch (error) {
       console.error("Error fetching user data:", error);  
     }
@@ -36,8 +41,29 @@ export default function CalendarSync() {
     toast.info("Disconnected from Google Calendar");
   };
 
+  const handleConnect = () => {
+    if (!userId) {
+      toast.error("Your account is still loading. Please try again.");
+      return;
+    }
+
+    setIsLoading(true);
+    window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}`;
+  };
+
   return (
     <Card className="calendar-card">
+      <div className="calendar-topbar">
+        <button
+          type="button"
+          className="calendar-back-btn"
+          onClick={() => navigate("/dashboard")}
+        >
+          <ArrowLeft />
+          Back to Dashboard
+        </button>
+      </div>
+
       <div className="calendar-header">
         <div className="calendar-icon">
           <Calendar className="calendar-icon-inner" />
@@ -51,7 +77,7 @@ export default function CalendarSync() {
         </div>
       </div>
 
-      {!isConnected ? (
+      {!isCalendarConnected ? (
         <>
           <div className="calendar-info-box">
             <div className="calendar-info-header">
@@ -68,7 +94,7 @@ export default function CalendarSync() {
 
           <button
             className="connect-btn"
-            onClick={() => window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}`}
+            onClick={handleConnect}
             disabled={isLoading}
           >
             {isLoading ? "Connecting..." : "Connect & Sync Calendar"}
@@ -81,6 +107,7 @@ export default function CalendarSync() {
             <div>
               <p className="success-title">Connected Successfully!</p>
               <p>Syncing with your Google Calendar</p>
+              <p className="calendar-sync-meta">{formatLastSync(lastCalendarSync)}</p>
             </div>
           </div>
 

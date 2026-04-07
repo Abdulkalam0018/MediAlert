@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
-import CalendarSync from "../Calendar/Calendar";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "../../api/axiosInstance.js";
 
 export default function TodaySchedule() {
   const [medications, setMedications] = useState([]);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
     const fetchMedications = async () => {
       try {
         const formattedDate = selectedDate.toISOString().split("T")[0];
-        // const testing = await axiosInstance.get(`/users/test`);
         const response = await axiosInstance.get(
           `/tracks/date/${formattedDate}`
         );
@@ -24,11 +21,24 @@ export default function TodaySchedule() {
     };
 
     fetchMedications();
+
+    const refreshFromAssistant = () => {
+      void fetchMedications();
+    };
+
+    window.addEventListener("medialert:assistant-action", refreshFromAssistant);
+
+    return () => {
+      window.removeEventListener(
+        "medialert:assistant-action",
+        refreshFromAssistant
+      );
+    };
   }, [selectedDate]);
 
   const markAsTaken = async (id, time, status) => {
     try {
-      const response = await axiosInstance.patch(`/tracks/${id}`, {
+      await axiosInstance.patch(`/tracks/${id}`, {
         status: status,
         time: time,
       });
@@ -74,13 +84,6 @@ export default function TodaySchedule() {
 
   return (
     <div>
-      <button
-        onClick={() => window.open("/calendar-sync", "_blank")}
-        className="calendar-btn"
-      >
-        Sync Calendar
-      </button>
-
       <div className="schedule-container">
         <div className="schedule-header">
           <h2>Medication Schedule</h2>
@@ -110,8 +113,6 @@ export default function TodaySchedule() {
             </button>
           </div>
         </div>
-
-        {showCalendar && <CalendarSync />}
 
         {medications && medications.length > 0 ? (
           medications.map((m) => (

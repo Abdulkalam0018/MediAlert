@@ -17,9 +17,9 @@
     justify-content: space-between;
     align-items: center;
     background: rgba(255, 255, 255, 0.6);
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 1.5rem 2rem;
     border-radius: 14px;
     margin-bottom: 1.5rem;
@@ -43,26 +43,89 @@
 .dashboard-header p {
     color: #555;
     font-size: 1rem;
-    margin-left: 10px;
+    margin: 0.25rem 0 0;
     flex-grow: 1;
 }
 
-/* Add Medication Button */
-.add-btn {
-    background: linear-gradient(135deg, #265ae0, #10b981);
-    color: white;
-    padding: 0.6rem 1.3rem;
+.dashboard-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.dashboard-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.calendar-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.calendar-status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.calendar-status-pill.connected {
+    background: rgba(16, 185, 129, 0.14);
+    color: #047857;
+}
+
+.calendar-status-pill.disconnected {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.dashboard-calendar-btn,
+.dashboard-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 210px;
+    height: 48px;
+    padding: 0 1.6rem;
     border: none;
-    border-radius: 10px;
+    border-radius: 14px;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.95rem;
+    line-height: 1;
+    white-space: nowrap;
     transition: all 0.3s ease;
     box-shadow: 0 3px 8px rgba(43, 110, 242, 0.3);
 }
 
-.add-btn:hover {
+.dashboard-calendar-btn {
+    background: linear-gradient(135deg, #265ae0, #1e4dd8);
+    color: white;
+}
+
+.dashboard-calendar-btn:hover {
     background: linear-gradient(135deg, #1e4dd8, #173cb0);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(43, 110, 242, 0.35);
+}
+
+.dashboard-add-btn {
+    background: linear-gradient(135deg, #265ae0, #10b981);
+    color: white;
+}
+
+.dashboard-add-btn:hover {
+    background: linear-gradient(135deg, #1e4dd8, #0d9668);
     transform: translateY(-1px);
     box-shadow: 0 5px 12px rgba(43, 110, 242, 0.35);
 }
@@ -78,7 +141,7 @@
 }
 
 .stat-card {
-    background: linear-gradient(to right, #f9f9f9,#e8f5e9);
+    background: linear-gradient(to right, #f9f9f9, #e8f5e9);
     border-radius: 14px;
     padding: 1.2rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -250,15 +313,134 @@
    AI Assistant
 ============================== */
 .ai-container {
-    background: #e3e6e6;
-    padding: 1.2rem;
+    background: linear-gradient(145deg, #f3fbff, #eefbf4);
+    border: 1px solid rgba(43, 110, 242, 0.12);
+    box-shadow: 0 10px 24px rgba(43, 110, 242, 0.08);
+    padding: 1.4rem;
     border-radius: 14px;
     margin-top: 2rem;
-    text-align: center;
+    text-align: left;
+}
+
+.ai-header h2 {
+    margin: 0 0 0.35rem 0;
+    color: #1e4dd8;
+}
+
+.ai-subtitle {
+    margin: 0;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.ai-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 1rem 0 1.1rem;
+}
+
+.ai-chip {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1d4ed8;
+    border: 1px solid rgba(43, 110, 242, 0.2);
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: all 0.2s ease;
+}
+
+.ai-chip:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(43, 110, 242, 0.14);
+}
+
+.ai-chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.ai-bubble {
+    max-width: 85%;
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.ai-bubble.assistant {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #1e4dd8, #0d9668);
+    color: #fff;
+}
+
+.ai-bubble.user {
+    align-self: flex-end;
+    background: #fff;
+    color: #1f2937;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+}
+
+.ai-role {
+    display: inline-block;
+    margin-bottom: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    opacity: 0.82;
+    text-transform: uppercase;
+}
+
+.ai-source {
+    display: inline-block;
+    margin-left: 0.6rem;
+    margin-bottom: 0.4rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+}
+
+.ai-source-gemini {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.ai-source-system {
+    background: rgba(255, 255, 255, 0.18);
+    color: #e0f2fe;
+}
+
+.ai-source-local_fallback,
+.ai-source-local_action {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff7d6;
+}
+
+.ai-bubble p {
+    margin: 0;
+    line-height: 1.55;
+}
+
+.ai-form {
+    margin-top: 1rem;
+}
+
+.ai-input-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
 }
 
 .ai-container input {
-    width: 70%;
+    flex: 1;
+    width: auto;
     padding: 0.6rem;
     border-radius: 10px;
     border: 1px solid #cbc1c1;
@@ -271,8 +453,7 @@
     box-shadow: 0 0 0 3px rgba(43, 110, 242, 0.15);
 }
 
-.ai-container button {
-    margin-left: 12px;
+.ai-input-row button {
     background: linear-gradient(135deg, #265ae0, #10b981);
     color: #fff;
     padding: 0.6rem 1.2rem;
@@ -282,37 +463,52 @@
     transition: all 0.3s ease;
 }
 
-.ai-container button:hover {
+.ai-input-row button:hover:not(:disabled) {
     background: #1e4dd8;
 }
 
-.ai-response {
-    margin-top: 1.2rem;
-    background: linear-gradient(135deg, #1e4dd8, #0d9668);
-    border-radius: 10px;
-    padding: 1rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+.ai-input-row button:disabled,
+.ai-chip:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
 }
 
-/* ==============================
-   Calendar Button
-============================== */
-.calendar-btn {
-    background: linear-gradient(135deg, #265ae0, #10b981);
-    color: white;
-    border: none;
-    padding: 0.4rem 0.9rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
-    float: right;
-    margin-bottom: 1rem;
+.ai-error {
+    margin: 0.75rem 0 0;
+    color: #b91c1c;
+    font-size: 0.9rem;
 }
 
-.calendar-btn:hover {
-    background: linear-gradient(135deg, #1e4dd8, #0d9668);
-    transform: translateY(-1px);
-    box-shadow: 0 5px 12px rgba(16, 185, 129, 0.4);
+@media (max-width: 700px) {
+    .ai-bubble {
+        max-width: 100%;
+    }
+
+    .ai-input-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ai-input-row button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 860px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .dashboard-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    .dashboard-calendar-btn,
+    .dashboard-add-btn {
+        min-width: 0;
+    }
 }

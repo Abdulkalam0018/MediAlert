@@ -8,12 +8,13 @@ const app = express()
 const allowedOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
     : ['http://localhost:5173'];
+const allowAllOrigins = allowedOrigins.includes('*');
 
 app.use(cors({
     origin: function (origin, callback) {
         // testing with tools like Postman 
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+        if (allowAllOrigins || allowedOrigins.includes(origin)) {
             return callback(null, true);
         } else {
             console.log('CORS blocked origin:', origin);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axiosInstance from "../../api/axiosInstance.js";
 
 export default function AdherenceStats() {
@@ -20,15 +20,26 @@ export default function AdherenceStats() {
     const fetchAdherence = async () => {
       try {
         const response = await axiosInstance.get("/tracks/adherence");
-        
         setData(response.data.adherenceData);
       } catch (error) {
         console.error("Error fetching adherence data:", error);
       }
-      
     };
+
     fetchAdherence();
-        
+
+    const refreshFromAssistant = () => {
+      void fetchAdherence();
+    };
+
+    window.addEventListener("medialert:assistant-action", refreshFromAssistant);
+
+    return () => {
+      window.removeEventListener(
+        "medialert:assistant-action",
+        refreshFromAssistant
+      );
+    };
   }, []);
 
   return (

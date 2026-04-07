@@ -9,6 +9,38 @@
     min-height: 100vh;
 }
 
+.calendar-topbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.calendar-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1e4dd8;
+    border: 1px solid rgba(43, 110, 242, 0.18);
+    padding: 0.55rem 0.95rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(43, 110, 242, 0.12);
+}
+
+.calendar-back-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(43, 110, 242, 0.18);
+}
+
+.calendar-back-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 .calendar-header {
     display: flex;
     align-items: start;
