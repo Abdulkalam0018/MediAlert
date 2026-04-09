@@ -389,6 +389,7 @@ Built by Team Spartan.
 - Abdul Kalam
 - Manjeet Kumar
 - Govind Saini
+- Surya Pratap singh
 
 ## License
 
