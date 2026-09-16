@@ -1,5 +1,24 @@
 import { Elixir } from "../models/elixir.model.js";
-import { getUserId } from "../utils/clerk.js"
+import { getUserId } from "../utils/clerk.js";
+import { getRedisClient } from "../config/redis.js";
+
+const invalidateUserTracksCache = async (userId) => {
+    const redisClient = getRedisClient();
+    if (!redisClient) return;
+    
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        await redisClient.del(`tracks:${userId}:${today.toISOString()}`);
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        await redisClient.del(`tracks:${userId}:${tomorrow.toISOString()}`);
+        console.log(`🧹 Cleared Redis Cache for user ${userId} due to medication change`);
+    } catch (e) {
+        console.error("Redis invalidation error:", e);
+    }
+};
 
 const addElixir = async (req, res) => {
     try {
@@ -52,6 +71,7 @@ const addElixir = async (req, res) => {
         });
 
         await newElixir.save();
+        await invalidateUserTracksCache(_id);
         res.status(201).json({ message: "Elixir added successfully", elixir: newElixir });
     } catch (error) {
         console.error("Error adding elixir:", error);
@@ -128,6 +148,7 @@ const updateElixir = async (req, res) => {
         elixir.endDate = endDate || elixir.endDate;
         if (remindersEnabled !== undefined) elixir.remindersEnabled = remindersEnabled;
         await elixir.save();
+        await invalidateUserTracksCache(user_id);
 
         res.status(200).json({ message: "Elixir updated successfully", elixir });
     } catch (error) {
@@ -157,6 +178,7 @@ const extendEndDate = async (req, res) => {
 
         elixir.endDate.setDate(elixir.endDate.getDate() + additionalDays);
         await elixir.save();
+        await invalidateUserTracksCache(user_id);
 
         res.status(200).json({ message: "Elixir end date extended successfully", elixir });
     } catch (error) {
@@ -187,6 +209,7 @@ const toggleStatus = async (req, res) => {
             elixir.status = "active";
         }
         await elixir.save();
+        await invalidateUserTracksCache(user_id);
 
         res.status(200).json({ message: "Elixir status toggled successfully", elixir });
     } catch (error) {
@@ -208,6 +231,7 @@ const deleteElixir = async (req, res) => {
         if (!elixir) {
             return res.status(404).json({ message: "Elixir not found." });
         }
+        await invalidateUserTracksCache(user_id);
 
         res.status(200).json({ message: "Elixir deleted successfully" });
     } catch (error) {
