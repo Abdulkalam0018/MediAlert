@@ -212,6 +212,29 @@ const executeMedicationAction = async ({ userId, intent, medications }) => {
   timingEntry.takenAt = intent.status === "taken" ? new Date() : null;
   await bestMatch.track.save();
 
+  // Invalidate Redis cache
+  const { getRedisClient } = await import("../config/redis.js");
+  const redisClient = getRedisClient();
+  if (redisClient) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    await redisClient.del(`tracks:${userId}:${today.toISOString()}`);
+  }
+
+  // Also notify via Socket.io so other clients update
+  const { getSocketIO } = await import("../socket.js");
+  const io = getSocketIO();
+  if (io) {
+    const auth = req.auth?.();
+    const clerkUserId = auth?.userId;
+    const targetRoom = clerkUserId ? String(clerkUserId) : String(userId);
+    io.to(targetRoom).emit("trackUpdated", {
+      trackId: bestMatch.track._id,
+      status: intent.status,
+    });
+    console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
+  }
+
   return {
     answer: buildActionSuccessMessage({
       medicationName: bestMatch.track.elixirId?.name || intent.medication.name,

@@ -277,9 +277,11 @@ const updateTrackTimingStatus = async (req, res) => {
 
         // Emit real-time Socket.io event
         try {
+            const clerkUserId = req.auth?.()?.userId;
+            const targetRoom = clerkUserId ? String(clerkUserId) : String(_id);
             const io = getIO();
-            io.to(_id).emit("trackUpdated", { trackId: id, time, status });
-            console.log(`📡 Emitted trackUpdated via WebSockets to user ${_id}`);
+            io.to(targetRoom).emit("trackUpdated", { trackId: id, time, status });
+            console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
         } catch (ioError) {
             console.error("Socket.io emit error:", ioError);
         }
