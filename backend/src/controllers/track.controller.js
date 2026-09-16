@@ -1,7 +1,9 @@
 import { Elixir } from "../models/elixir.model.js";
-import { Track } from "../models/track.model.js"
-import { getUserId } from "../utils/clerk.js"
-import { generateDailyTracksOfUser } from "../utils/sync.js"
+import { Track } from "../models/track.model.js";
+import { getUserId } from "../utils/clerk.js";
+import { generateDailyTracksOfUser } from "../utils/sync.js";
+import { getRedisClient } from "../config/redis.js";
+import { getIO } from "../socket.js";
 
 // Utility function to transform tracks into timing-based documents
 const transformTracksToTimings = (tracks) => {
@@ -194,6 +196,17 @@ const getTracksByDate = async (req, res) => {
         nextDate.setDate(nextDate.getDate() + 1);
         nextDate.setHours(0, 0, 0, 0);
 
+        const redisClient = getRedisClient();
+        const cacheKey = `tracks:${_id}:${requestedDate.toISOString()}`;
+
+        if (redisClient) {
+            const cachedData = await redisClient.get(cacheKey);
+            if (cachedData) {
+                console.log(`🚀 Serving tracks from Redis Cache for user ${_id}`);
+                return res.status(200).json({ medications: JSON.parse(cachedData) });
+            }
+        }
+
         // Create tracks for the requested date if they don't exist
         await createTracksForDate(_id, requestedDate);
 
@@ -207,6 +220,12 @@ const getTracksByDate = async (req, res) => {
         medications.sort((a, b) => {
             return a.time > b.time ? 1 : -1;
         });
+
+        if (redisClient) {
+            // Cache for 1 hour (3600 seconds)
+            await redisClient.setEx(cacheKey, 3600, JSON.stringify(medications));
+            console.log(`💾 Saved tracks to Redis Cache for user ${_id}`);
+        }
 
         return res.status(200).json({ medications });
     } catch (error) {
@@ -245,6 +264,26 @@ const updateTrackTimingStatus = async (req, res) => {
         }
 
         await track.save();
+
+        // Invalidate Redis Cache
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const scheduledDate = new Date(track.scheduledDate);
+            scheduledDate.setHours(0, 0, 0, 0);
+            const cacheKey = `tracks:${_id}:${scheduledDate.toISOString()}`;
+            await redisClient.del(cacheKey);
+            console.log(`🧹 Cleared Redis Cache for user ${_id} on date ${scheduledDate.toISOString()}`);
+        }
+
+        // Emit real-time Socket.io event
+        try {
+            const io = getIO();
+            io.to(_id).emit("trackUpdated", { trackId: id, time, status });
+            console.log(`📡 Emitted trackUpdated via WebSockets to user ${_id}`);
+        } catch (ioError) {
+            console.error("Socket.io emit error:", ioError);
+        }
+
         return res.status(200).json({ message: "Track timing status updated successfully.", track });
     } catch (error) {
         console.error("Error updating track timing status:", error);

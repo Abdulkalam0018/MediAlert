@@ -1,7 +1,7 @@
 import { Track } from "../models/track.model.js";
 import { ProactiveAlert } from "../models/proactiveAlert.model.js";
 import { sendNotification } from "../firebase/firebase.service.js";
-
+import { publishEvent } from "../config/rabbitmq.js";
 /**
  * Simple heuristic baseline (replace later with trained ML model)
  */
@@ -62,10 +62,25 @@ export const generateProactiveAlerts = async () => {
         if (user.fcmToken) {
           const title = "Medication Reminder";
           const body = `You have a high chance of missing your ${elixir.name} dose at ${track.timings[0].time}. Please remember to take it.`;
-          await sendNotification(user.fcmToken, title, body, {
-            trackId: track._id.toString(),
-            elixirId: elixir._id.toString(),
+          
+          const eventPublished = publishEvent("notifications", {
+            fcmToken: user.fcmToken,
+            title,
+            body,
+            data: {
+              trackId: track._id.toString(),
+              elixirId: elixir._id.toString(),
+            },
+            userId: user._id
           });
+
+          // Fallback if RabbitMQ is not connected
+          if (!eventPublished) {
+            await sendNotification(user.fcmToken, title, body, {
+              trackId: track._id.toString(),
+              elixirId: elixir._id.toString(),
+            });
+          }
         }
         // console.log(`Proactive alert sent to ${user.name} for ${elixir.name}`);
       }

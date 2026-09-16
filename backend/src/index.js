@@ -1,15 +1,26 @@
 import 'dotenv/config'
 import connectDB from "./db/index.js";
 import app from './app.js'
+import http from 'http';
+import { initSocket } from './socket.js';
+import { initRedis } from './config/redis.js';
+import { initRabbitMQ } from './config/rabbitmq.js';
+
+const server = http.createServer(app);
+initSocket(server);
 
 connectDB()
-.then(() => {
+.then(async () => {
+    // Initialize Redis & RabbitMQ before starting server
+    await initRedis();
+    await initRabbitMQ();
+
     const port = process.env.PORT || 8000
-    app.listen(port, () => {
+    server.listen(port, () => {
         console.log(`Server is running on port ${port}`);
     })
 
-    app.on('error', (error) => {
+    server.on('error', (error) => {
         console.error('Server error:', error);
         process.exit(1);
     });

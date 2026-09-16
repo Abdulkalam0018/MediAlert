@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
+import { socket } from "../../socket.js";
 import Login from "../../components/Login.jsx"
 import DashboardHeader from "../../components/Dashboard/DashboardHeader";
 import AdherenceStats from "../../components/Dashboard/AdherenceStats";
@@ -22,6 +24,19 @@ export default function Dashboard() {
     nextParams.delete("calendar");
     setSearchParams(nextParams, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user && user.id) {
+      socket.connect();
+      socket.emit("join", user.id);
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [user]);
 
   return (
     <div style={{ display: 'flex', position: 'relative' }}>

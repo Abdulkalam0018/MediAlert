@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "../../api/axiosInstance.js";
+import { socket } from "../../socket.js";
 
 export default function TodaySchedule() {
   const [medications, setMedications] = useState([]);
@@ -28,11 +29,17 @@ export default function TodaySchedule() {
 
     window.addEventListener("medialert:assistant-action", refreshFromAssistant);
 
+    socket.on("trackUpdated", (data) => {
+      console.log("Real-time update received:", data);
+      void fetchMedications();
+    });
+
     return () => {
       window.removeEventListener(
         "medialert:assistant-action",
         refreshFromAssistant
       );
+      socket.off("trackUpdated");
     };
   }, [selectedDate]);
 
