@@ -13,6 +13,7 @@
   "dependencies": {
     "@clerk/express": "^1.7.35",
     "@google/generative-ai": "^0.24.1",
+    "amqplib": "^2.0.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dayjs": "^1.11.18",
@@ -22,7 +23,9 @@
     "googleapis": "^162.0.0",
     "mongoose": "^8.19.0",
     "node-cron": "^4.2.1",
-    "ollama": "^0.6.0"
+    "ollama": "^0.6.0",
+    "redis": "^6.2.1",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
