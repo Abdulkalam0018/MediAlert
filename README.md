@@ -382,6 +382,16 @@ From [backend/package.json](/Users/abdulkalam/Desktop/medialert/MediAlert/backen
 - Better admin and observability tooling
 - E2E tests for auth and OAuth flows
 
+## Performance & Load Testing
+
+A custom latency benchmarking script is included in the `backend` directory to test API endpoint performance. It measures average, minimum, and maximum latency, as well as throughput (requests per second).
+
+Run the test:
+```bash
+cd backend
+node latency-test.js
+```
+
 ## Team
 
 Built by Team Spartan.
