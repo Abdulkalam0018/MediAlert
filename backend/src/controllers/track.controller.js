@@ -251,18 +251,26 @@ const updateTrackTimingStatus = async (req, res) => {
             return res.status(404).json({ message: "Track not found or does not belong to the user." });
         }
 
-        const timingEntry = track.timings.find(t => t.time.getTime() === new Date(time).getTime());
-        if (!timingEntry) {
+        // Try to match exact time, or fallback to matching the ISO string (to avoid timezone/millisecond quirks)
+        const targetTimeStr = new Date(time).toISOString();
+        const timingIndex = track.timings.findIndex(t => 
+            t.time.getTime() === new Date(time).getTime() || 
+            new Date(t.time).toISOString() === targetTimeStr
+        );
+
+        if (timingIndex === -1) {
+            console.error("Timing mismatch. Frontend sent:", time, "Available timings:", track.timings.map(t=>t.time));
             return res.status(404).json({ message: "Timing entry not found for the specified time." });
         }
 
-        timingEntry.status = status;
+        track.timings[timingIndex].status = status;
         if (status === "taken") {
-            timingEntry.takenAt = new Date();
+            track.timings[timingIndex].takenAt = new Date();
         } else {
-            timingEntry.takenAt = null;
+            track.timings[timingIndex].takenAt = null;
         }
 
+        track.markModified("timings");
         await track.save();
 
         // Invalidate Redis Cache

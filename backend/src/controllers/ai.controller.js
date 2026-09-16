@@ -210,6 +210,8 @@ const executeMedicationAction = async ({ userId, intent, medications }) => {
   const timingEntry = bestMatch.track.timings[bestMatch.index];
   timingEntry.status = intent.status;
   timingEntry.takenAt = intent.status === "taken" ? new Date() : null;
+  
+  bestMatch.track.markModified("timings");
   await bestMatch.track.save();
 
   // Invalidate Redis cache
