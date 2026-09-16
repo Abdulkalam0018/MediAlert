@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axiosInstance from "../../api/axiosInstance.js";
+import { socket } from "../../socket.js";
 
 export default function AdherenceStats() {
   const [data, setData] = useState({
@@ -34,11 +35,17 @@ export default function AdherenceStats() {
 
     window.addEventListener("medialert:assistant-action", refreshFromAssistant);
 
+    socket.on("trackUpdated", (eventData) => {
+      console.log("Real-time update received for Adherence:", eventData);
+      void fetchAdherence();
+    });
+
     return () => {
       window.removeEventListener(
         "medialert:assistant-action",
         refreshFromAssistant
       );
+      socket.off("trackUpdated");
     };
   }, []);
 
