@@ -14,12 +14,20 @@ const serviceAccountPath = existsSync(deployedPath)
   ? deployedPath
   : localPath;
 
-// Read the service account file
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
+let firebaseAdmin = null;
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (existsSync(serviceAccountPath)) {
+  try {
+    const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
+    firebaseAdmin = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("✅ Firebase Admin initialized successfully");
+  } catch (err) {
+    console.error("⚠️ Failed to parse or initialize Firebase Admin SDK:", err.message);
+  }
+} else {
+  console.log("⚠️ firebase-secret.json not found. Push notifications will be disabled locally.");
+}
 
-export default admin;
+export default firebaseAdmin;

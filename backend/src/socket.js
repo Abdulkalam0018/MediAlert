@@ -32,3 +32,5 @@ export const getIO = () => {
     }
     return io;
 };
+
+export const getSocketIO = getIO;

@@ -11,8 +11,12 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const messaging = getMessaging(app);
+const hasFirebaseConfig = Boolean(
+  import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID
+);
+
+const app = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
+export const messaging = app ? getMessaging(app) : null;
 
 // Register Service Worker for background notifications
 if ('serviceWorker' in navigator) {
@@ -32,6 +36,11 @@ export const generateFirebaseToken = async () => {
     
     if (permission !== "granted") {
       console.error("Notification permission not granted.");
+      return null;
+    }
+
+    if (!messaging) {
+      console.log("Firebase Messaging not configured");
       return null;
     }
 

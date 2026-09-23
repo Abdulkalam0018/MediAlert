@@ -10,6 +10,11 @@ const sendNotification = async (token, title, body, data = {}) => {
     data, // optional custom payload
   };
 
+  if (!admin) {
+    console.log("ℹ️ Push notification skipped (Firebase Admin not initialized).");
+    return;
+  }
+
   try {
     const response = await admin.messaging().send(message);
   } catch (error) {

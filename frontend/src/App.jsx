@@ -9,6 +9,8 @@ import { setClerkTokenGetter } from "./api/axiosInstance.js";
 
 import Landing from "./pages/landing/Landing";
 import Medications from "./pages/Medication/Medications";
+import { Toaster } from "sonner";
+
 function App() {
   const { getToken } = useAuth();
 
@@ -18,6 +20,7 @@ function App() {
   
   return (
     <Router>
+      <Toaster position="top-right" richColors />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route

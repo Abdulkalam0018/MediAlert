@@ -1,6 +1,9 @@
+@import "tailwindcss";
+
 @layer base {
     body {
-        @apply bg-background text-foreground;
+        background-color: var(--background, #f8fafc);
+        color: var(--foreground, #0f172a);
         background-image: url('/background-ligh.png');
         background-size: cover;
         background-attachment: fixed;

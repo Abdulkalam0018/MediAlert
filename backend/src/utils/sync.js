@@ -60,7 +60,15 @@ const processElixirsAndGenerateTracks = async (elixirs) => {
         userId: elixir.userId,
         elixirId: elixir._id,
         scheduledDate,
-        timings: elixir.timings.map(time => ({ time: time.setDate(scheduledDate.getDate()) }))
+        timings: elixir.timings.map(t => {
+          const origTime = new Date(t);
+          const timingDate = new Date(scheduledDate);
+          timingDate.setHours(origTime.getHours(), origTime.getMinutes(), origTime.getSeconds(), 0);
+          return {
+            time: timingDate,
+            status: "pending"
+          };
+        })
       }));
   
       if (tracks.length) {

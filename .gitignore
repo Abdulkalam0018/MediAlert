@@ -21,6 +21,11 @@ build/
 .vscode/
 .idea/
 .env
+*.env
+**/.env
+.env.*
+!.env.example
+!**/.env.example
 *.suo
 *.ntvs*
 *.njsproj

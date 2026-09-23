@@ -4,29 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill, Plus, Trash2, Edit2, ArrowLeft, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import axiosInstance from "../../api/axiosInstance.js"
-import "./Medications.css"; // ✅ external CSS
+import { Pill, Plus, Trash2, Edit2, ArrowLeft, X, Save, Clock } from "lucide-react";
+import { toast } from "sonner";
+import axiosInstance from "../../api/axiosInstance.js";
+import "./Medications.css";
 
 const Medications = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [medications, setMedications] = useState([])
+  const [medications, setMedications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const fetchMedications = async () => {
-      try {
-        const response = await axiosInstance.get("/elixirs/");
-        setMedications(response.data);
-      } catch (error) {
-        console.error("Error fetching medications:", error);
-      }
-    };
-
-    fetchMedications();
-  }, []);
-
+  // Form State for Adding Medication
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -34,94 +23,200 @@ const Medications = () => {
     timings: [""],
   });
 
+  // Modal & Form State for Editing/Updating Medication
+  const [editingMed, setEditingMed] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    dosage: "",
+    frequency: "Daily",
+    timings: [""],
+  });
+
+  const fetchMedications = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/elixirs/");
+      setMedications(response.data);
+    } catch (error) {
+      console.error("Error fetching medications:", error);
+      toast.error("Failed to load medications.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMedications();
+  }, []);
+
+  // --- Add Form Timing Handlers ---
   const handleAddTiming = () => {
-    setFormData({
-      ...formData,
-      timings: [...formData.timings, ""]
-    });
+    setFormData((prev) => ({
+      ...prev,
+      timings: [...prev.timings, ""],
+    }));
   };
 
   const handleRemoveTiming = (index) => {
     if (formData.timings.length > 1) {
-      const newTimings = formData.timings.filter((_, i) => i !== index);
-      setFormData({
-        ...formData,
-        timings: newTimings
-      });
+      setFormData((prev) => ({
+        ...prev,
+        timings: prev.timings.filter((_, i) => i !== index),
+      }));
     }
   };
 
   const handleTimingChange = (index, value) => {
     const newTimings = [...formData.timings];
     newTimings[index] = value;
-    setFormData({
-      ...formData,
-      timings: newTimings
+    setFormData((prev) => ({
+      ...prev,
+      timings: newTimings,
+    }));
+  };
+
+  // --- Edit Form Timing Handlers ---
+  const handleAddEditTiming = () => {
+    setEditFormData((prev) => ({
+      ...prev,
+      timings: [...prev.timings, ""],
+    }));
+  };
+
+  const handleRemoveEditTiming = (index) => {
+    if (editFormData.timings.length > 1) {
+      setEditFormData((prev) => ({
+        ...prev,
+        timings: prev.timings.filter((_, i) => i !== index),
+      }));
+    }
+  };
+
+  const handleEditTimingChange = (index, value) => {
+    const newTimings = [...editFormData.timings];
+    newTimings[index] = value;
+    setEditFormData((prev) => ({
+      ...prev,
+      timings: newTimings,
+    }));
+  };
+
+  // Open Edit Modal with Pre-filled Data
+  const handleOpenEditModal = (med) => {
+    setEditingMed(med);
+
+    // Convert Date objects or ISO strings to HH:MM format for the time inputs
+    const formattedTimings =
+      med.timings && med.timings.length > 0
+        ? med.timings.map((t) => {
+            const d = new Date(t);
+            if (isNaN(d.getTime())) return "";
+            const hours = String(d.getHours()).padStart(2, "0");
+            const minutes = String(d.getMinutes()).padStart(2, "0");
+            return `${hours}:${minutes}`;
+          })
+        : [""];
+
+    setEditFormData({
+      name: med.name || "",
+      dosage: med.dosage || "",
+      frequency: med.frequency || "Daily",
+      timings: formattedTimings.length > 0 ? formattedTimings : [""],
     });
   };
 
+  // Close Edit Modal
+  const handleCloseEditModal = () => {
+    setEditingMed(null);
+  };
+
+  // Submit Handler: Add Medication
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Filter out empty timings
-    
-    const validTimings = formData.timings.filter(timing => timing.trim() !== "").map(timing => {
-      // Convert time string (HH:MM) to a Date object for today
-      const [hours, minutes] = timing.split(":").map(Number);
-      const date = new Date();
-      date.setHours(hours, minutes, 0, 0);
-      return date;
-    });    
-    
-    if (!formData.name || !formData.dosage || validTimings.length === 0) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields including at least one timing",
-        variant: "destructive",
-      });
+
+    const validTimings = formData.timings.filter((t) => t.trim() !== "");
+
+    if (!formData.name.trim() || !formData.dosage.trim() || validTimings.length === 0) {
+      toast.error("Please fill in medication name, dosage, and at least one time.");
       return;
     }
 
     try {
+      setIsSubmitting(true);
       const medicationData = {
-        name: formData.name,
-        dosage: formData.dosage,
+        name: formData.name.trim(),
+        dosage: formData.dosage.trim(),
         frequency: formData.frequency,
         timings: validTimings,
       };
 
       const response = await axiosInstance.post("/elixirs/add", medicationData);
-      setMedications([...medications, response.data.elixir]);
+      const newMed = response.data.elixir;
+
+      setMedications((prev) => [newMed, ...prev]);
       setFormData({ name: "", dosage: "", frequency: "Daily", timings: [""] });
-      toast({
-        title: "Medication added",
-        description: `${medicationData.name} has been added to your list`,
-      });
+      toast.success(`${newMed.name} added successfully!`);
     } catch (error) {
       console.error("Error adding medication:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add medication. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to add medication. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
+  // Submit Handler: Update Medication
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!editingMed) return;
+
+    const validTimings = editFormData.timings.filter((t) => t.trim() !== "");
+
+    if (!editFormData.name.trim() || !editFormData.dosage.trim() || validTimings.length === 0) {
+      toast.error("Please fill in medication name, dosage, and at least one time.");
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const updatedData = {
+        name: editFormData.name.trim(),
+        dosage: editFormData.dosage.trim(),
+        frequency: editFormData.frequency,
+        timings: validTimings,
+      };
+
+      const response = await axiosInstance.put(`/elixirs/update/${editingMed._id}`, updatedData);
+      const updatedMed = response.data.elixir;
+
+      setMedications((prev) =>
+        prev.map((med) => (med._id === editingMed._id ? updatedMed : med))
+      );
+
+      toast.success(`${updatedMed.name} updated successfully!`);
+      handleCloseEditModal();
+    } catch (error) {
+      console.error("Error updating medication:", error);
+      toast.error("Failed to update medication. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Delete Handler: Remove Medication
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete ${name || "this medication"}?`)) {
+      return;
+    }
+
     try {
       await axiosInstance.delete(`/elixirs/${id}`);
-      setMedications(medications.filter((med) => med._id !== id));
-      toast({
-        title: "Medication removed",
-        description: "The medication has been deleted",
-      });
+      setMedications((prev) => prev.filter((med) => med._id !== id));
+      toast.success(`${name || "Medication"} deleted successfully.`);
     } catch (error) {
       console.error("Error deleting medication:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete medication. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete medication. Please try again.");
     }
   };
 
@@ -135,12 +230,12 @@ const Medications = () => {
               <Pill className="header-pill" />
             </div>
             <h1 className="header-text">My Medications</h1>
-          </div >
+          </div>
           <div className="calendar-btn">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
           </div>
         </div>
       </header>
@@ -152,9 +247,9 @@ const Medications = () => {
           <Card className="add-card">
             <div className="add-header">
               <div className="add-icon">
-                <Plus className="w-5 h-5" style={{ color: 'white' }} />
+                <Plus className="w-5 h-5" style={{ color: "white" }} />
               </div>
-              <h2 className="add-title" >Add Medication</h2>
+              <h2 className="add-title">Add Medication</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="add-form">
@@ -166,7 +261,8 @@ const Medications = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="e.g., Aspirin"
+                  placeholder="e.g., Metformin, Aspirin"
+                  required
                 />
               </div>
 
@@ -178,7 +274,8 @@ const Medications = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, dosage: e.target.value })
                   }
-                  placeholder="e.g., 100mg"
+                  placeholder="e.g., 500mg, 1 tablet"
+                  required
                 />
               </div>
 
@@ -193,22 +290,32 @@ const Medications = () => {
                   className="select-input"
                 >
                   <option value="Daily">Daily</option>
-                  <option value="Alternate">Alternate</option>
+                  <option value="Alternate">Alternate Days</option>
+                  <option value="Every3Days">Every 3 Days</option>
                   <option value="Weekly">Weekly</option>
                   <option value="Monthly">Monthly</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <Label>Timings *</Label>
-                {
-                  formData.timings.map((timing, index) => (
-                  <div key={index} className="timing-input-group" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                <Label>Scheduled Timings *</Label>
+                {formData.timings.map((timing, index) => (
+                  <div
+                    key={index}
+                    className="timing-input-group"
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      marginBottom: "8px",
+                      alignItems: "center",
+                    }}
+                  >
                     <Input
                       type="time"
                       value={timing}
                       onChange={(e) => handleTimingChange(index, e.target.value)}
                       style={{ flex: 1 }}
+                      required={index === 0}
                     />
                     {formData.timings.length > 1 && (
                       <Button
@@ -216,13 +323,13 @@ const Medications = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveTiming(index)}
-                        style={{ flexShrink: 0}}
+                        style={{ flexShrink: 0 }}
                         className="remove-timing-btn"
+                        title="Remove time"
                       >
-                        <X className="select-input" />
+                        <X className="w-4 h-4 text-destructive" />
                       </Button>
-                    )
-                  }
+                    )}
                   </div>
                 ))}
                 <Button
@@ -237,9 +344,14 @@ const Medications = () => {
                 </Button>
               </div>
 
-              <Button type="submit" className="add-btn" size="lg">
+              <Button
+                type="submit"
+                className="add-btn"
+                size="lg"
+                disabled={isSubmitting}
+              >
                 <Plus className="w-4 h-4 mr-2" />
-                Add Medication
+                {isSubmitting ? "Adding..." : "Add Medication"}
               </Button>
             </form>
           </Card>
@@ -250,12 +362,16 @@ const Medications = () => {
               Your Medications ({medications.length})
             </h2>
 
-            {medications.length === 0 ? (
+            {loading ? (
+              <p style={{ textAlign: "center", color: "#64748b", padding: "2rem" }}>
+                Loading medications...
+              </p>
+            ) : medications.length === 0 ? (
               <Card className="empty-card">
                 <Pill className="empty-icon" />
                 <h3 className="empty-title">No medications yet</h3>
                 <p className="empty-text">
-                  Add your first medication using the form
+                  Add your first medication using the form on the left
                 </p>
               </Card>
             ) : (
@@ -264,12 +380,12 @@ const Medications = () => {
                   <Card
                     key={med._id}
                     className="med-card"
-                    style={{ animationDelay: `${index * 0.1}s` }}
+                    style={{ animationDelay: `${index * 0.08}s` }}
                   >
                     <div className="med-item">
                       <div className="med-left">
                         <div className="med-icon">
-                          <Pill className="w-6 h-6" style={{ color: 'white' }} />
+                          <Pill className="w-6 h-6" style={{ color: "white" }} />
                         </div>
                         <div>
                           <h3 className="med-name">{med.name}</h3>
@@ -284,10 +400,13 @@ const Medications = () => {
                               {med.timings && med.timings.length > 0 ? (
                                 <>
                                   <b>Timings:</b>{" "}
-                                  {med.timings.map((time, index) => (
-                                    <span key={index}>
-                                      {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                      {index < med.timings.length - 1 && ", "}
+                                  {med.timings.map((time, idx) => (
+                                    <span key={idx}>
+                                      {new Date(time).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                      {idx < med.timings.length - 1 && ", "}
                                     </span>
                                   ))}
                                 </>
@@ -299,13 +418,19 @@ const Medications = () => {
                         </div>
                       </div>
                       <div className="med-actions">
-                        <Button variant="ghost" size="icon">
-                          <Edit2 className="w-4 h-4" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEditModal(med)}
+                          title="Update Medication"
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(med._id)}
+                          onClick={() => handleDelete(med._id, med.name)}
+                          title="Delete Medication"
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -318,6 +443,145 @@ const Medications = () => {
           </div>
         </div>
       </main>
+
+      {/* --- EDIT MEDICATION MODAL --- */}
+      {editingMed && (
+        <div className="modal-overlay" onClick={handleCloseEditModal}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-icon-badge">
+                  <Edit2 className="w-4 h-4" />
+                </div>
+                <h3 className="modal-title">Update Medication</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={handleCloseEditModal}
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit}>
+              <div className="modal-body add-form">
+                <div className="form-group">
+                  <Label htmlFor="edit-name">Medication Name *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, name: e.target.value })
+                    }
+                    placeholder="e.g., Metformin"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <Label htmlFor="edit-dosage">Dosage *</Label>
+                  <Input
+                    id="edit-dosage"
+                    value={editFormData.dosage}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, dosage: e.target.value })
+                    }
+                    placeholder="e.g., 500mg"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <Label htmlFor="edit-frequency">Frequency</Label>
+                  <select
+                    id="edit-frequency"
+                    value={editFormData.frequency}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, frequency: e.target.value })
+                    }
+                    className="select-input"
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Alternate">Alternate Days</option>
+                    <option value="Every3Days">Every 3 Days</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <Label>Scheduled Timings *</Label>
+                  {editFormData.timings.map((timing, index) => (
+                    <div
+                      key={index}
+                      className="timing-input-group"
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginBottom: "8px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Input
+                        type="time"
+                        value={timing}
+                        onChange={(e) =>
+                          handleEditTimingChange(index, e.target.value)
+                        }
+                        style={{ flex: 1 }}
+                        required={index === 0}
+                      />
+                      {editFormData.timings.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveEditTiming(index)}
+                          style={{ flexShrink: 0 }}
+                          title="Remove time"
+                        >
+                          <X className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddEditTiming}
+                    className="mt-2"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Another Time
+                  </Button>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={handleCloseEditModal}
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-save"
+                  disabled={isUpdating}
+                >
+                  <Save className="w-4 h-4" />
+                  {isUpdating ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

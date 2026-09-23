@@ -10,6 +10,7 @@ const transformTracksToTimings = (tracks) => {
     const timings = [];
     
     tracks.forEach(track => {
+        if (!track || !track.elixirId) return;
         track.timings.forEach(timing => {
             timings.push({
                 _id: timing._id,
@@ -85,7 +86,15 @@ const createTracksForDate = async (userId, scheduledDate) => {
             continue; // Skip if track already exists
         }
 
-        const timings = elixir.timings.map(time => ({ time: time.setDate(scheduledDate.getDate()) }));
+        const timings = elixir.timings.map(t => {
+            const origTime = new Date(t);
+            const timingDate = new Date(scheduledDate);
+            timingDate.setHours(origTime.getHours(), origTime.getMinutes(), origTime.getSeconds(), 0);
+            return {
+                time: timingDate,
+                status: "pending"
+            };
+        });
 
         const newTrack = new Track({
             userId,

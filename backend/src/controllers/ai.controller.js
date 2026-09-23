@@ -138,7 +138,7 @@ const getTimingCandidate = ({ track, status, requestedTime }) => {
   return candidates[0] || null;
 };
 
-const executeMedicationAction = async ({ userId, intent, medications }) => {
+const executeMedicationAction = async ({ req, userId, intent, medications }) => {
   if (!intent?.medication) {
     return {
       answer: buildActionNeedsMedicationMessage(medications),
@@ -218,23 +218,31 @@ const executeMedicationAction = async ({ userId, intent, medications }) => {
   const { getRedisClient } = await import("../config/redis.js");
   const redisClient = getRedisClient();
   if (redisClient) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    await redisClient.del(`tracks:${userId}:${today.toISOString()}`);
+    try {
+      for await (const key of redisClient.scanIterator({ MATCH: `tracks:${userId}:*` })) {
+        await redisClient.del(key);
+      }
+    } catch (e) {
+      console.error("Redis invalidation error:", e);
+    }
   }
 
   // Also notify via Socket.io so other clients update
-  const { getSocketIO } = await import("../socket.js");
-  const io = getSocketIO();
-  if (io) {
-    const auth = req.auth?.();
-    const clerkUserId = auth?.userId;
-    const targetRoom = clerkUserId ? String(clerkUserId) : String(userId);
-    io.to(targetRoom).emit("trackUpdated", {
-      trackId: bestMatch.track._id,
-      status: intent.status,
-    });
-    console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
+  try {
+    const { getIO } = await import("../socket.js");
+    const io = getIO();
+    if (io) {
+      const auth = req?.auth?.();
+      const clerkUserId = auth?.userId;
+      const targetRoom = clerkUserId ? String(clerkUserId) : String(userId);
+      io.to(targetRoom).emit("trackUpdated", {
+        trackId: bestMatch.track._id,
+        status: intent.status,
+      });
+      console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
+    }
+  } catch (ioErr) {
+    // Graceful fallback if socket is uninitialized
   }
 
   return {
@@ -301,6 +309,7 @@ const askAI = async (req, res) => {
       }
 
       const actionResult = await executeMedicationAction({
+        req,
         userId,
         intent: actionIntent,
         medications,
