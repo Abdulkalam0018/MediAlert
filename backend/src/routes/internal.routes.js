@@ -106,3 +106,4 @@ router.get("/adherence/:userId", requireInternalKey, async (req, res) => {
 });
 
 export default router;
+

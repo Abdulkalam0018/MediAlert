@@ -104,3 +104,4 @@ Example:
 | **Strategy Pattern** | `execute_tool()` routes by tool name |
 | **Observer / Logging** | `logging` module with file + stdout handlers |
 | **Evaluation Harness** | `run_evaluation_suite()` with quality scoring |
+
