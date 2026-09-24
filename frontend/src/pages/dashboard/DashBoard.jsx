@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { socket } from "../../socket.js";
-import Login from "../../components/Login.jsx"
 import DashboardHeader from "../../components/Dashboard/DashboardHeader";
 import AdherenceStats from "../../components/Dashboard/AdherenceStats";
 import TodaySchedule from "../../components/Dashboard/TodaySchedule";
@@ -30,6 +29,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (user && user.id) {
       socket.connect();
+      if (!socket.connected) {
+        socket.connect();
+      }
       socket.emit("join", user.id);
 
       return () => {
@@ -39,17 +41,21 @@ export default function Dashboard() {
   }, [user]);
 
   return (
-    <div style={{ display: 'flex', position: 'relative' }}>
-      <div style={{ position: 'fixed', right: '1rem', top: '1rem', zIndex: 1000, transform: 'scale(1.8)', transformOrigin: 'top right' }}>
-        <Login />
-      </div>
-      
-      <div className="dashboard" style={{ width: '100%' }}>
+    <div className="dashboard-page-wrapper">
+      <div className="dashboard">
         <DashboardHeader />
-        <AdherenceStats/>
-        <TodaySchedule />
-        {/* <RecentActivity /> */}
-        <AIHealthAssistant />
+        <AdherenceStats />
+
+        {/* 2-Column Responsive Layout: Schedule on Left, AI Assistant Sidebar on Right */}
+        <div className="dashboard-grid-layout">
+          <div className="dashboard-schedule-col">
+            <TodaySchedule />
+          </div>
+
+          <aside className="dashboard-sidebar-col">
+            <AIHealthAssistant />
+          </aside>
+        </div>
       </div>
     </div>
   );

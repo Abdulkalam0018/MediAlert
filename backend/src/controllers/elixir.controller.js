@@ -1,9 +1,8 @@
 import { Elixir } from "../models/elixir.model.js";
 import { Track } from "../models/track.model.js";
-import { getUserId } from "../utils/clerk.js";
+import { getUserId, notifyRealtimeUser } from "../utils/clerk.js";
 import { getRedisClient } from "../config/redis.js";
 import { createTracksForDate } from "./track.controller.js";
-import { getIO } from "../socket.js";
 
 const invalidateUserTracksCache = async (userId) => {
     const redisClient = getRedisClient();
@@ -21,15 +20,7 @@ const invalidateUserTracksCache = async (userId) => {
 };
 
 const notifyUserRealtime = (req, userId, payload) => {
-    try {
-        const clerkUserId = req.auth?.()?.userId;
-        const targetRoom = clerkUserId ? String(clerkUserId) : String(userId);
-        const io = getIO();
-        io.to(targetRoom).emit("trackUpdated", payload);
-        console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
-    } catch (ioError) {
-        // Socket might not have connected clients or initialized, ignore gracefully
-    }
+    notifyRealtimeUser(req, userId, "trackUpdated", payload);
 };
 
 const parseTimingArray = (timings, baseDate) => {

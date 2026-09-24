@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Pill, Plus, Trash2, Edit2, ArrowLeft, X, Save, Clock } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "../../api/axiosInstance.js";
+import { socket } from "../../socket.js";
 import "./Medications.css";
 
 const Medications = () => {
@@ -48,6 +49,17 @@ const Medications = () => {
 
   useEffect(() => {
     fetchMedications();
+
+    const handleTrackUpdated = (data) => {
+      console.log("Real-time update in Medications page:", data);
+      fetchMedications();
+    };
+
+    socket.on("trackUpdated", handleTrackUpdated);
+
+    return () => {
+      socket.off("trackUpdated", handleTrackUpdated);
+    };
   }, []);
 
   // --- Add Form Timing Handlers ---

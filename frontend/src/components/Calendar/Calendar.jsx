@@ -8,7 +8,6 @@ import axiosInstance from "../../api/axiosInstance.js";
 import useCalendarStatus from "../../hooks/useCalendarStatus.js";
 import "./Calendar.css";
 
-
 export default function CalendarSync() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -35,9 +34,9 @@ export default function CalendarSync() {
       await refreshCalendarStatus();
       window.dispatchEvent(new CustomEvent("medialert:calendar-status"));
     } catch (error) {
-      console.error("Error fetching user data:", error);  
+      console.error("Error fetching user data:", error);
     }
-    
+
     toast.info("Disconnected from Google Calendar");
   };
 
@@ -48,83 +47,96 @@ export default function CalendarSync() {
     }
 
     setIsLoading(true);
-    window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}`;
+    const origin = encodeURIComponent(window.location.origin);
+    window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}?redirect=${origin}`;
   };
 
   return (
-    <Card className="calendar-card">
-      <div className="calendar-topbar">
-        <button
-          type="button"
-          className="calendar-back-btn"
-          onClick={() => navigate("/dashboard")}
-        >
-          <ArrowLeft />
-          Back to Dashboard
-        </button>
-      </div>
-
-      <div className="calendar-header">
-        <div className="calendar-icon">
-          <Calendar className="calendar-icon-inner" />
+    <div className="calendar-page-wrapper">
+      <Card className="calendar-card">
+        <div className="calendar-topbar">
+          <button
+            type="button"
+            className="calendar-back-btn"
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft size={16} />
+            <span>Back to Dashboard</span>
+          </button>
         </div>
-        <div className="calendar-header-text">
-          <h3>Google Calendar Integration</h3>
-          <p>
-            Automatically sync your medications to Google Calendar for
-            reminders.
-          </p>
-        </div>
-      </div>
 
-      {!isCalendarConnected ? (
-        <>
-          <div className="calendar-info-box">
-            <div className="calendar-info-header">
-              <Info className="info-icon" />
-              <div>
-                <p className="info-title">What you'll get:</p>
-                <ul className="info-list">
-                  <li>• Automatic calendar events for each medication dose</li>
-                  <li>• Reminders 15 minutes before each dose</li>
-                </ul>
+        <div className="calendar-header">
+          <div className="calendar-icon">
+            <Calendar className="calendar-icon-inner" />
+          </div>
+          <div className="calendar-header-text">
+            <h3>Google Calendar Integration</h3>
+            <p>
+              Automatically sync your medication schedules to Google Calendar for
+              reliable, proactive reminders across all your devices.
+            </p>
+          </div>
+        </div>
+
+        {!isCalendarConnected ? (
+          <>
+            <div className="calendar-info-box">
+              <div className="calendar-info-header">
+                <Info className="info-icon" />
+                <div>
+                  <p className="info-title">What you'll get:</p>
+                  <ul className="info-list">
+                    <li>• Automatic calendar events scheduled for each medication dose</li>
+                    <li>• Timely notifications 15 minutes before each prescribed time</li>
+                    <li>• Real-time synchronization whenever you modify medications</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
 
-          <button
-            className="connect-btn"
-            onClick={handleConnect}
-            disabled={isLoading}
-          >
-            {isLoading ? "Connecting..." : "Connect & Sync Calendar"}
-          </button>
-        </>
-      ) : (
-        <div className="calendar-connected">
-          <div className="calendar-success">
-            <CheckCircle2 className="success-icon" />
-            <div>
-              <p className="success-title">Connected Successfully!</p>
-              <p>Syncing with your Google Calendar</p>
-              <p className="calendar-sync-meta">{formatLastSync(lastCalendarSync)}</p>
+            <button
+              type="button"
+              className="connect-btn"
+              onClick={handleConnect}
+              disabled={isLoading}
+            >
+              {isLoading ? "Connecting to Google..." : "Connect & Sync Google Calendar"}
+            </button>
+          </>
+        ) : (
+          <div className="calendar-connected">
+            <div className="calendar-success">
+              <CheckCircle2 className="success-icon" />
+              <div>
+                <p className="success-title">Google Calendar Synced</p>
+                <p>Your medication reminders are actively updating in your calendar.</p>
+                <p className="calendar-sync-meta">{formatLastSync(lastCalendarSync)}</p>
+              </div>
+            </div>
+
+            <div className="calendar-actions">
+              <button
+                type="button"
+                onClick={() =>
+                  window.open("https://calendar.google.com", "_blank")
+                }
+                className="btn-icon"
+              >
+                <ExternalLink size={16} />
+                <span>View Google Calendar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="btn-icon"
+                style={{ color: "#ef4444" }}
+              >
+                Disconnect
+              </button>
             </div>
           </div>
-
-          <div className="calendar-actions">
-            <button
-              onClick={() =>
-                window.open("https://calendar.google.com", "_blank")
-              }
-              className="btn-icon"
-            >
-              <ExternalLink/>
-              View Calendar
-            </button>
-            <button onClick={handleDisconnect} className="btn-icon">Disconnect</button>
-          </div>
-        </div>
-      )}
-    </Card>
+        )}
+      </Card>
+    </div>
   );
 }

@@ -1,9 +1,8 @@
 import { Elixir } from "../models/elixir.model.js";
 import { Track } from "../models/track.model.js";
-import { getUserId } from "../utils/clerk.js";
+import { getUserId, notifyRealtimeUser } from "../utils/clerk.js";
 import { generateDailyTracksOfUser } from "../utils/sync.js";
 import { getRedisClient } from "../config/redis.js";
-import { getIO } from "../socket.js";
 
 // Utility function to transform tracks into timing-based documents
 const transformTracksToTimings = (tracks) => {
@@ -292,16 +291,8 @@ const updateTrackTimingStatus = async (req, res) => {
             console.log(`🧹 Cleared Redis Cache for user ${_id} on date ${scheduledDate.toISOString()}`);
         }
 
-        // Emit real-time Socket.io event
-        try {
-            const clerkUserId = req.auth?.()?.userId;
-            const targetRoom = clerkUserId ? String(clerkUserId) : String(_id);
-            const io = getIO();
-            io.to(targetRoom).emit("trackUpdated", { trackId: id, time, status });
-            console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
-        } catch (ioError) {
-            console.error("Socket.io emit error:", ioError);
-        }
+        // Emit real-time Socket.io event to all user rooms
+        await notifyRealtimeUser(req, _id, "trackUpdated", { trackId: id, time, status });
 
         return res.status(200).json({ message: "Track timing status updated successfully.", track });
     } catch (error) {

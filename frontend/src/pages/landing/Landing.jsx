@@ -80,10 +80,10 @@ const Landing = () => {
         <div className="hero-gradient" />
         <div className="hero-container">
           <div className="hero-text">
-            <h2>Never Miss a Dose</h2>
+            <h2>Never Miss a Dose with <span>MediAlert AI</span></h2>
             <p>
-              MediAlert uses smart reminders, AI predictions, and calendar sync
-              to help you maintain perfect medication adherence.
+              MediAlert combines intelligent scheduling, an interactive AI chatbot assistant,
+              and automatic Google Calendar syncing to help you stay 100% on track with your prescriptions.
             </p>
             <div className="login-wrapper">
               <Login />
@@ -91,7 +91,11 @@ const Landing = () => {
             <div className="hero-badges">
               <div>
                 <span className="badge-dot" />
-                Free forever plan
+                Gemini AI Powered
+              </div>
+              <div>
+                <span className="badge-dot" style={{ background: "#8b5cf6", boxShadow: "0 0 8px #8b5cf6" }} />
+                Real-Time Tracking
               </div>
             </div>
           </div>

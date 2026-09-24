@@ -16,43 +16,68 @@ const scope = [
 ];
 
 const redirectToGoogle = (req, res) => {
-    const { userId } = req.params
+    const { userId } = req.params;
+    const redirectUrl = req.query.redirect || req.headers.referer || process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Encode userId and redirectUrl into the state string
+    const state = Buffer.from(JSON.stringify({ userId, redirectUrl })).toString('base64');
     
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline', // important to get refresh token
         prompt: 'consent',
         scope: scope,
-        state: userId
+        state: state
     });
     res.redirect(authUrl);
 };
 
 const handleGoogleCallback = async (req, res) => {
-    // console.log("Its working till google conroller handle callback");
-    
     const code = req.query.code;
-    let userId = req.query.state || getAuth(req).userId;
+    let userId = null;
+    let redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    if (!code) return res.status(400).json({ error: 'No code provided' });
+    // Decode state parameter safely
+    if (req.query.state) {
+        try {
+            const decoded = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
+            if (decoded.userId) userId = decoded.userId;
+            if (decoded.redirectUrl) redirectUrl = decoded.redirectUrl;
+        } catch {
+            // Fallback if state was passed as raw userId
+            userId = req.query.state;
+        }
+    }
+
+    if (!userId) {
+        userId = getAuth(req)?.userId;
+    }
+
+    const cleanOrigin = (redirectUrl || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, "");
+
+    if (!code) {
+        return res.redirect(`${cleanOrigin}/dashboard?calendar=no_code`);
+    }
 
     try {
         const { tokens } = await oauth2Client.getToken(code);
 
-        const updatedUser = await User.findOneAndUpdate({ clerkId: userId }, 
-        {
-            googleTokens: {
-                access_token: tokens.access_token,
-                refresh_token: tokens.refresh_token,
-                expires_date: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-                last_refresh_at: new Date(),
+        const updatedUser = await User.findOneAndUpdate(
+            { clerkId: userId }, 
+            {
+                googleTokens: {
+                    access_token: tokens.access_token,
+                    refresh_token: tokens.refresh_token,
+                    expires_date: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+                    last_refresh_at: new Date(),
+                },
+                allowCalendarSync: true, // Enable calendar sync when user connects
             },
-            allowCalendarSync: true, // Enable calendar sync when user connects
-        },
-        { new: true }
+            { new: true }
         );
         
         if (!updatedUser) {
-            return res.status(404).json({ error: 'User not found' });
+            console.error('User not found in DB for clerkId:', userId);
+            return res.redirect(`${cleanOrigin}/dashboard?calendar=user_not_found`);
         }
         
         // Trigger initial calendar sync in background
@@ -60,11 +85,11 @@ const handleGoogleCallback = async (req, res) => {
             console.error('Error during initial calendar sync:', err);
         });
 
-        // Send the user back to a guaranteed app route after OAuth completes.
-        res.redirect(`${process.env.FRONTEND_URL}/dashboard?calendar=connected`);
+        // Send the user back to the exact project URL they were on!
+        res.redirect(`${cleanOrigin}/dashboard?calendar=connected`);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to exchange code for tokens' });
+        console.error('Failed to exchange code for tokens:', err);
+        res.redirect(`${cleanOrigin}/dashboard?calendar=error`);
     }
 };
 

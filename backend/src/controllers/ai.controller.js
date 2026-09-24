@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { Elixir } from "../models/elixir.model.js";
 import { Track } from "../models/track.model.js";
-import { getUserId } from "../utils/clerk.js";
+import { getUserId, notifyRealtimeUser } from "../utils/clerk.js";
 import { createTracksForDate } from "./track.controller.js";
 import {
   buildActionNeedsMedicationMessage,
@@ -228,22 +228,10 @@ const executeMedicationAction = async ({ req, userId, intent, medications }) => 
   }
 
   // Also notify via Socket.io so other clients update
-  try {
-    const { getIO } = await import("../socket.js");
-    const io = getIO();
-    if (io) {
-      const auth = req?.auth?.();
-      const clerkUserId = auth?.userId;
-      const targetRoom = clerkUserId ? String(clerkUserId) : String(userId);
-      io.to(targetRoom).emit("trackUpdated", {
-        trackId: bestMatch.track._id,
-        status: intent.status,
-      });
-      console.log(`📡 Emitted trackUpdated via WebSockets to room ${targetRoom}`);
-    }
-  } catch (ioErr) {
-    // Graceful fallback if socket is uninitialized
-  }
+  await notifyRealtimeUser(req, userId, "trackUpdated", {
+    trackId: bestMatch.track._id,
+    status: intent.status,
+  });
 
   return {
     answer: buildActionSuccessMessage({

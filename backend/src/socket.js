@@ -5,8 +5,12 @@ let io;
 export const initSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: process.env.CORS_ORIGIN || "*",
-            methods: ["GET", "POST", "PATCH", "PUT", "DELETE"]
+            origin: (origin, callback) => {
+                // Dynamically allow client origin to prevent CORS failures across localhost ports
+                callback(null, true);
+            },
+            methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+            credentials: true
         }
     });
 
@@ -14,12 +18,16 @@ export const initSocket = (server) => {
         console.log(`🔌 Client connected: ${socket.id}`);
 
         socket.on("join", (userId) => {
-            socket.join(userId);
-            console.log(`👤 User ${userId} joined their room.`);
+            if (!userId) return;
+            const rooms = Array.isArray(userId) ? userId : [userId];
+            rooms.forEach(room => {
+                socket.join(String(room));
+                console.log(`👤 Socket ${socket.id} joined room: ${room}`);
+            });
         });
 
-        socket.on("disconnect", () => {
-            console.log(`❌ Client disconnected: ${socket.id}`);
+        socket.on("disconnect", (reason) => {
+            console.log(`❌ Client disconnected: ${socket.id} (${reason})`);
         });
     });
 
