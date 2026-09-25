@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill, Plus, Trash2, Edit2, ArrowLeft, X, Save, Clock } from "lucide-react";
+import { Pill, Plus, Trash2, Edit2, ArrowLeft, X, Save, Clock, CheckCircle2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import axiosInstance from "../../api/axiosInstance.js";
 import { socket } from "../../socket.js";
@@ -14,6 +14,7 @@ const Medications = () => {
   const navigate = useNavigate();
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("active");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State for Adding Medication
@@ -22,6 +23,8 @@ const Medications = () => {
     dosage: "",
     frequency: "Daily",
     timings: [""],
+    startDate: "",
+    endDate: "",
   });
 
   // Modal & Form State for Editing/Updating Medication
@@ -32,12 +35,14 @@ const Medications = () => {
     dosage: "",
     frequency: "Daily",
     timings: [""],
+    startDate: "",
+    endDate: "",
   });
 
   const fetchMedications = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get("/elixirs/");
+      const response = await axiosInstance.get(`/elixirs/?status=${statusFilter}`);
       setMedications(response.data);
     } catch (error) {
       console.error("Error fetching medications:", error);
@@ -60,7 +65,7 @@ const Medications = () => {
     return () => {
       socket.off("trackUpdated", handleTrackUpdated);
     };
-  }, []);
+  }, [statusFilter]);
 
   // --- Add Form Timing Handlers ---
   const handleAddTiming = () => {
@@ -114,6 +119,13 @@ const Medications = () => {
     }));
   };
 
+  
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
+  };
+
   // Open Edit Modal with Pre-filled Data
   const handleOpenEditModal = (med) => {
     setEditingMed(med);
@@ -130,11 +142,13 @@ const Medications = () => {
           })
         : [""];
 
-    setEditFormData({
+        setEditFormData({
       name: med.name || "",
       dosage: med.dosage || "",
       frequency: med.frequency || "Daily",
       timings: formattedTimings.length > 0 ? formattedTimings : [""],
+      startDate: formatDateForInput(med.startDate),
+      endDate: formatDateForInput(med.endDate),
     });
   };
 
@@ -156,18 +170,20 @@ const Medications = () => {
 
     try {
       setIsSubmitting(true);
-      const medicationData = {
+            const medicationData = {
         name: formData.name.trim(),
         dosage: formData.dosage.trim(),
         frequency: formData.frequency,
         timings: validTimings,
+        startDate: formData.startDate || undefined,
+        endDate: formData.endDate || undefined,
       };
 
       const response = await axiosInstance.post("/elixirs/add", medicationData);
       const newMed = response.data.elixir;
 
       setMedications((prev) => [newMed, ...prev]);
-      setFormData({ name: "", dosage: "", frequency: "Daily", timings: [""] });
+      setFormData({ name: "", dosage: "", frequency: "Daily", timings: [""], startDate: "", endDate: "" });
       toast.success(`${newMed.name} added successfully!`);
     } catch (error) {
       console.error("Error adding medication:", error);
@@ -192,11 +208,13 @@ const Medications = () => {
 
     try {
       setIsUpdating(true);
-      const updatedData = {
+            const updatedData = {
         name: editFormData.name.trim(),
         dosage: editFormData.dosage.trim(),
         frequency: editFormData.frequency,
         timings: validTimings,
+        startDate: editFormData.startDate || undefined,
+        endDate: editFormData.endDate || undefined,
       };
 
       const response = await axiosInstance.put(`/elixirs/update/${editingMed._id}`, updatedData);
@@ -217,6 +235,17 @@ const Medications = () => {
   };
 
   // Delete Handler: Remove Medication
+  const handleToggleStatus = async (id, currentStatus) => {
+    try {
+      await axiosInstance.post(`/elixirs/toggle/${id}`);
+      toast.success(currentStatus === "active" ? "Medication marked as completed." : "Medication reactivated.");
+      fetchMedications();
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      toast.error("Failed to update status.");
+    }
+  };
+
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Are you sure you want to delete ${name || "this medication"}?`)) {
       return;
@@ -310,6 +339,28 @@ const Medications = () => {
               </div>
 
               <div className="form-group">
+                
+                <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <Label htmlFor="start-date">Start Date</Label>
+                    <Input
+                      type="date"
+                      id="start-date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Label htmlFor="end-date">End Date</Label>
+                    <Input
+                      type="date"
+                      id="end-date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <Label>Scheduled Timings *</Label>
                 {formData.timings.map((timing, index) => (
                   <div
@@ -408,6 +459,12 @@ const Medications = () => {
                             <p>
                               <b>Frequency:</b> {med.frequency}
                             </p>
+                                                        <p>
+                              <b>Duration:</b> {med.startDate ? new Date(med.startDate).toLocaleDateString() : "N/A"} - {med.endDate ? new Date(med.endDate).toLocaleDateString() : "Ongoing"}
+                            </p>
+                            <p>
+                              {med.status === "completed" && <b style={{color:"#dc2626"}}>Completed</b>}
+                            </p>
                             <p>
                               {med.timings && med.timings.length > 0 ? (
                                 <>
@@ -430,6 +487,18 @@ const Medications = () => {
                         </div>
                       </div>
                       <div className="med-actions">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleStatus(med._id, med.status)}
+                          title={med.status === "active" ? "Mark Complete" : "Reactivate"}
+                        >
+                          {med.status === "active" ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <RotateCcw className="w-4 h-4 text-orange-600" />
+                          )}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -524,6 +593,28 @@ const Medications = () => {
                 </div>
 
                 <div className="form-group">
+                  
+                <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <Label htmlFor="edit-start-date">Start Date</Label>
+                    <Input
+                      type="date"
+                      id="edit-start-date"
+                      value={editFormData.startDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Label htmlFor="edit-end-date">End Date</Label>
+                    <Input
+                      type="date"
+                      id="edit-end-date"
+                      value={editFormData.endDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                   <Label>Scheduled Timings *</Label>
                   {editFormData.timings.map((timing, index) => (
                     <div

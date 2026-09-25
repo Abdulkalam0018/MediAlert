@@ -127,7 +127,15 @@ const getElixirs = async (req, res) => {
             return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
-        const elixirs = await Elixir.find({ userId: _id, status: "active" }).sort({ createdAt: -1 });
+        const { status } = req.query;
+        const query = { userId: _id };
+        if (status && status !== 'all') {
+            query.status = status;
+        } else if (!status) {
+            query.status = "active";
+        }
+
+        const elixirs = await Elixir.find(query).sort({ createdAt: -1 });
         res.status(200).json(elixirs);
     } catch (error) {
         console.error("Error fetching elixirs:", error);
