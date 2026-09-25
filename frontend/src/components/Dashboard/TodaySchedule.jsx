@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, Pill, Calendar as CalendarIcon, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Pill, Calendar as CalendarIcon, CheckCircle2, WifiOff } from "lucide-react";
 import axiosInstance from "../../api/axiosInstance.js";
 import { socket } from "../../socket.js";
 import { toast } from "sonner";
+import { enqueueOfflineDose, getQueueCount } from "../../utils/offlineQueue.js";
 
 export default function TodaySchedule() {
   const [medications, setMedications] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // ── Refresh queue count badge ────────────────────────────────────────────
+  const refreshQueueCount = async () => {
+    const count = await getQueueCount();
+    setPendingCount(count);
+  };
 
   useEffect(() => {
     const fetchMedications = async () => {
@@ -18,7 +27,6 @@ export default function TodaySchedule() {
         const response = await axiosInstance.get(
           `/tracks/date/${formattedDate}`
         );
-
         setMedications(response.data.medications);
       } catch (error) {
         console.error("Error fetching medications:", error);
@@ -26,6 +34,7 @@ export default function TodaySchedule() {
     };
 
     fetchMedications();
+    refreshQueueCount();
 
     const refreshFromAssistant = () => {
       void fetchMedications();
@@ -37,65 +46,103 @@ export default function TodaySchedule() {
       console.log("Real-time update received in TodaySchedule:", data);
       void fetchMedications();
     };
-
     socket.on("trackUpdated", handleTrackUpdated);
 
+    // ── Online / Offline listeners ─────────────────────────────────────────
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast("✅ Back online — syncing offline changes...", {
+        style: { background: "#16a34a", color: "#fff", borderRadius: "14px", fontWeight: "700" },
+      });
+      // Re-fetch fresh data now that we're back
+      void fetchMedications();
+      void refreshQueueCount();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast("📴 You're offline — doses will sync when reconnected", {
+        style: { background: "#7c3aed", color: "#fff", borderRadius: "14px", fontWeight: "700" },
+        duration: 5000,
+      });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // ── Service Worker → app message (sync complete) ───────────────────────
+    const handleSWMessage = (event) => {
+      if (event.data?.type === "OFFLINE_SYNC_COMPLETE") {
+        toast(`☁️ Synced offline dose: ${event.data.status}`, {
+          style: { background: "#0ea5e9", color: "#fff", borderRadius: "14px", fontWeight: "700" },
+        });
+        void fetchMedications();
+        void refreshQueueCount();
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", handleSWMessage);
+
     return () => {
-      window.removeEventListener(
-        "medialert:assistant-action",
-        refreshFromAssistant
-      );
+      window.removeEventListener("medialert:assistant-action", refreshFromAssistant);
       socket.off("trackUpdated", handleTrackUpdated);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      navigator.serviceWorker?.removeEventListener("message", handleSWMessage);
     };
   }, [selectedDate]);
 
   const markAsTaken = async (id, time, status) => {
-    try {
-      await axiosInstance.patch(`/tracks/${id}`, {
-        status: status,
-        time: time,
-      });
-
-      if (status === "taken") {
-        toast("Dose recorded as Taken! 💊", {
-          style: {
-            background: "#be185d",
-            color: "#ffffff",
-            borderRadius: "14px",
-            fontWeight: "700",
-            border: "none",
-            boxShadow: "0 8px 24px rgba(190, 24, 93, 0.35)",
-          },
-        });
-      } else if (status === "delayed") {
-        toast("Dose marked as Delayed ⏰", {
-          style: {
-            background: "#d97706",
-            color: "#ffffff",
-            borderRadius: "14px",
-            fontWeight: "700",
-            border: "none",
-          },
-        });
-      } else if (status === "missed") {
-        toast("Dose marked as Missed", {
-          style: {
-            background: "#e11d48",
-            color: "#ffffff",
-            borderRadius: "14px",
-            fontWeight: "700",
-            border: "none",
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Error marking medication as taken:", error);
-    }
-
+    // ── Optimistic UI update first (works online AND offline) ──────────────
     const updated = medications.map((m) =>
       m.trackId === id && m.time === time ? { ...m, status: status } : m
     );
     setMedications(updated);
+
+    // ── Offline path: queue to IndexedDB + register Background Sync ────────
+    if (!navigator.onLine) {
+      try {
+        await enqueueOfflineDose({ trackId: id, time, status });
+        await refreshQueueCount();
+
+        // Register Background Sync so SW replays it when internet returns
+        const swReg = await navigator.serviceWorker?.ready;
+        if (swReg?.sync) {
+          await swReg.sync.register("medialert-dose-sync");
+          console.log("[Offline] Queued dose update + registered Background Sync");
+        }
+
+        toast(`📴 Saved offline — will sync when reconnected`, {
+          style: { background: "#7c3aed", color: "#fff", borderRadius: "14px", fontWeight: "700" },
+          duration: 4000,
+        });
+      } catch (err) {
+        console.error("Failed to queue offline dose:", err);
+      }
+      return; // Don't attempt API call while offline
+    }
+
+    // ── Online path: normal API call ───────────────────────────────────────
+    try {
+      await axiosInstance.patch(`/tracks/${id}`, { status, time });
+
+      if (status === "taken") {
+        toast("Dose recorded as Taken! 💊", {
+          style: {
+            background: "#be185d", color: "#ffffff", borderRadius: "14px",
+            fontWeight: "700", border: "none", boxShadow: "0 8px 24px rgba(190, 24, 93, 0.35)",
+          },
+        });
+      } else if (status === "delayed") {
+        toast("Dose marked as Delayed ⏰", {
+          style: { background: "#d97706", color: "#ffffff", borderRadius: "14px", fontWeight: "700", border: "none" },
+        });
+      } else if (status === "missed") {
+        toast("Dose marked as Missed", {
+          style: { background: "#e11d48", color: "#ffffff", borderRadius: "14px", fontWeight: "700", border: "none" },
+        });
+      }
+    } catch (error) {
+      console.error("Error marking medication:", error);
+    }
   };
 
   const goToPreviousDay = () => {
@@ -130,6 +177,27 @@ export default function TodaySchedule() {
 
   return (
     <div className="schedule-container">
+      {/* ── Offline banner ──────────────────────────────────────────────── */}
+      {!isOnline && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "0.5rem",
+          background: "#7c3aed", color: "#fff", borderRadius: "10px",
+          padding: "0.5rem 1rem", marginBottom: "0.75rem",
+          fontSize: "0.82rem", fontWeight: "600",
+        }}>
+          <WifiOff size={15} />
+          <span>Offline mode — doses saved locally</span>
+          {pendingCount > 0 && (
+            <span style={{
+              marginLeft: "auto", background: "#fff", color: "#7c3aed",
+              borderRadius: "999px", padding: "1px 8px", fontWeight: "700", fontSize: "0.78rem",
+            }}>
+              {pendingCount} pending
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="schedule-header">
         <div className="schedule-title-row">
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
