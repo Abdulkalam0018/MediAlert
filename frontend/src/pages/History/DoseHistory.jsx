@@ -14,7 +14,7 @@ const DoseHistory = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await axiosInstance.get("/tracks");
+        const response = await axiosInstance.get("/tracks/all");
         let meds = response.data.medications || [];
         
         // Filter only those that have a takenAt or status is taken/missed/delayed
