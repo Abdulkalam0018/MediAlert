@@ -11,6 +11,7 @@ import { clearScheduleCache } from "./utils/offlineQueue.js";
 
 import Landing from "./pages/landing/Landing";
 import Medications from "./pages/Medication/Medications";
+import DoseHistory from "./pages/History/DoseHistory";
 import { Toaster } from "sonner";
 
 const LAST_USER_KEY = "medialert:last-user";
@@ -127,6 +128,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Medications />
+            </ProtectedRoute>
+          }
+        />
+                <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <DoseHistory />
             </ProtectedRoute>
           }
         />

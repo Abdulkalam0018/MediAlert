@@ -3,7 +3,7 @@ import { generateFirebaseToken } from "../../notifications/firebase.js";
 import { useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance.js";
 import useCalendarStatus from "../../hooks/useCalendarStatus.js";
-import { Calendar, Plus, CheckCircle2, Clock } from "lucide-react";
+import { Calendar, Plus, CheckCircle2, Clock, History } from "lucide-react";
 import Login from "../Login.jsx";
 
 export default function DashboardHeader() {
@@ -20,6 +20,10 @@ export default function DashboardHeader() {
 
     fetchToken();
   }, []);
+
+  const handleHistory = () => {
+    navigate("/history");
+  };
 
   const handleAddMedication = () => {
     navigate("/medication");
@@ -70,6 +74,15 @@ export default function DashboardHeader() {
         >
           <Calendar size={17} />
           <span>{isCalendarConnected ? "Manage Calendar" : "Sync Calendar"}</span>
+        </button>
+
+                <button
+          type="button"
+          className="dashboard-calendar-btn"
+          onClick={handleHistory}
+        >
+          <History size={17} />
+          <span>Dose History</span>
         </button>
 
         <button
