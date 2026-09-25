@@ -485,3 +485,91 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(139, 92, 246, 0.45);
 }
+
+/* ==========================================================================
+   RESPONSIVE — Medications Page Mobile
+   ========================================================================== */
+
+@media (max-width: 480px) {
+  .medications-main {
+    padding: 1rem 0.75rem 5rem;
+  }
+
+  .header-inner {
+    padding: 0.85rem 1rem;
+  }
+
+  .header-text {
+    font-size: 1.2rem;
+  }
+
+  /* Remove sticky on mobile — add form goes full width at top */
+  .add-card {
+    position: static;
+    padding: 1.3rem;
+    border-radius: 18px;
+  }
+
+  .add-title {
+    font-size: 1.15rem;
+  }
+
+  .add-btn {
+    width: 100%;
+  }
+
+  /* Medication list cards */
+  .med-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+
+  .med-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Bigger tap targets for action buttons */
+  .med-actions button {
+    width: 42px;
+    height: 42px;
+  }
+
+  /* Modal: full screen on mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-dialog {
+    border-radius: 24px 24px 0 0;
+    max-width: 100%;
+    max-height: 90vh;
+  }
+
+  .modal-body {
+    max-height: 60vh;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .medications-main {
+    padding: 1.2rem 1rem 4rem;
+  }
+
+  .add-card {
+    position: static;
+  }
+
+  .med-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .med-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

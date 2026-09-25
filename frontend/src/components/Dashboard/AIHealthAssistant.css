@@ -923,3 +923,132 @@
   white-space: nowrap;
 }
 
+/* ==========================================================================
+   RESPONSIVE — AI Health Assistant Mobile
+   ========================================================================== */
+
+@media (max-width: 480px) {
+  /* Preview card in dashboard */
+  .ai-preview-card {
+    padding: 1.1rem;
+    border-radius: 18px;
+  }
+
+  .ai-preview-h2 {
+    font-size: 1.2rem;
+  }
+
+  .ai-preview-chips {
+    gap: 0.45rem;
+  }
+
+  .ai-preview-chip {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  /* Fullscreen overlay header */
+  .ai-fs-header {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .ai-fs-back-btn {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .ai-fs-title-col h1 {
+    font-size: 0.95rem;
+  }
+
+  .ai-fs-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Hero section in chat */
+  .ai-fs-hero {
+    padding: 1.5rem 0.5rem 1rem;
+  }
+
+  .ai-fs-hero-title {
+    font-size: 1.6rem;
+  }
+
+  .ai-fs-hero-desc {
+    font-size: 0.9rem;
+  }
+
+  /* Quick action cards: single column */
+  .ai-fs-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  /* Chat body padding */
+  .ai-fs-body {
+    padding: 1rem 0.85rem 0.5rem;
+  }
+
+  /* Message bubbles wider on mobile */
+  .ai-msg-content-wrapper {
+    max-width: 92%;
+  }
+
+  .ai-msg-bubble {
+    font-size: 0.93rem;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+  }
+
+  /* Footer input row */
+  .ai-fs-footer {
+    padding: 0.6rem 0.85rem 1rem;
+  }
+
+  .ai-fs-input-capsule {
+    padding: 0.4rem 0.45rem 0.4rem 1rem;
+  }
+
+  /* Footer chips: horizontal scroll on mobile */
+  .ai-fs-footer-chips {
+    padding-bottom: 0.5rem;
+  }
+
+  .ai-fs-footer-chip {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  /* Large orb smaller on mobile */
+  .ai-orb-sphere.large {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .ai-fs-header {
+    padding: 0.85rem 1.3rem;
+  }
+
+  .ai-fs-body {
+    padding: 1.2rem 1.2rem 0.8rem;
+  }
+
+  .ai-fs-footer {
+    padding: 0.7rem 1.2rem 1.2rem;
+  }
+
+  .ai-msg-content-wrapper {
+    max-width: 88%;
+  }
+}
+
+/* Safe area for phones with notch/bottom bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .ai-fs-footer {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+}

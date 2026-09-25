@@ -323,3 +323,114 @@
   font-size: 0.88rem;
   margin: 0;
 }
+
+/* ==========================================================================
+   RESPONSIVE — Landing Page Mobile
+   ========================================================================== */
+
+@media (max-width: 480px) {
+  /* Nav */
+  .nav-container {
+    padding: 0.85rem 1rem;
+  }
+
+  .nav-links {
+    gap: 0.5rem;
+  }
+
+  /* Hide nav text links on tiny phones, keep sign-in button */
+  .nav-link {
+    display: none !important;
+  }
+
+  /* Hero */
+  .hero-section {
+    padding: 2.5rem 1rem 3rem;
+    text-align: center;
+  }
+
+  .hero-container {
+    gap: 2rem;
+  }
+
+  .hero-text h2 {
+    font-size: 2.1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-text p {
+    font-size: 1rem;
+    max-width: 100%;
+  }
+
+  .hero-badges {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  /* Hide hero image on very small phones to save space */
+  .hero-image {
+    display: none;
+  }
+
+  /* Features */
+  .features-section {
+    padding: 3rem 1rem;
+  }
+
+  .features-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .feature-card {
+    padding: 1.3rem;
+    border-radius: 18px;
+  }
+
+  /* CTA */
+  .cta-section {
+    padding: 2.5rem 1rem;
+  }
+
+  .cta-container {
+    padding: 2.5rem 1.2rem;
+    border-radius: 22px;
+  }
+
+  .cta-container h2 {
+    font-size: 1.7rem;
+  }
+
+  .cta-container p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .hero-section {
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  .hero-text h2 {
+    font-size: 2.6rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+
+  .cta-container {
+    padding: 3rem 1.8rem;
+  }
+
+  .cta-container h2 {
+    font-size: 2rem;
+  }
+}
