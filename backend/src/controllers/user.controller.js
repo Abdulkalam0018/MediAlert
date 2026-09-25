@@ -2,11 +2,8 @@ import { User } from "../models/user.model.js"
 import { getAuth, clerkClient } from "@clerk/express";
 
 const test = async (req, res) => {
-
-    console.log("Request Headers-Cookie:", req.headers.cookie);
-    console.log("Request Auth-debug:", req.auth().debug());
-    console.log("Request Auth:", req.auth());
-
+    // Health check only. This used to log request cookies and Clerk auth
+    // details for any unauthenticated caller.
     res.send('User controller is working!');
 };
 

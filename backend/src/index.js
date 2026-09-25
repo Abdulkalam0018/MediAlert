@@ -1,4 +1,6 @@
 import 'dotenv/config'
+// Must come right after dotenv and before anything that creates Dates.
+import './config/timezone.js'
 import connectDB from "./db/index.js";
 import app from './app.js'
 import http from 'http';

@@ -29,5 +29,7 @@ const trackSchema = new Schema({
 });
 
 trackSchema.index({ elixirId: 1, scheduledDate: 1 }, { unique: true })
+// Used by the proactive alert job to find doses that are due soon.
+trackSchema.index({ "timings.time": 1 })
 
 export const Track = mongoose.model("Track", trackSchema);

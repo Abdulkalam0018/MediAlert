@@ -2,24 +2,16 @@ import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import { clerkMiddleware } from '@clerk/express'
+import { isAllowedOrigin } from './config/origins.js'
 
 const app = express()
 
-const allowedOrigins = process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-    : ['http://localhost:5173'];
-const allowAllOrigins = allowedOrigins.includes('*');
-
 app.use(cors({
     origin: function (origin, callback) {
-        // testing with tools like Postman 
-        if (!origin) return callback(null, true);
-        if (allowAllOrigins || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        } else {
-            console.log('CORS blocked origin:', origin);
-            return callback(new Error('Not allowed by CORS'));
-        }
+        // Non-browser clients (curl, Postman, server-to-server) send no Origin.
+        if (!origin || isAllowedOrigin(origin)) return callback(null, true);
+        console.log('CORS blocked origin:', origin);
+        return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
 }))

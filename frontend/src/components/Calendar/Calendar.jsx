@@ -40,15 +40,26 @@ export default function CalendarSync() {
     toast.info("Disconnected from Google Calendar");
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (!userId) {
       toast.error("Your account is still loading. Please try again.");
       return;
     }
 
     setIsLoading(true);
-    const origin = encodeURIComponent(window.location.origin);
-    window.location.href = `${import.meta.env.VITE_CALENDAR_AUTH_REDIRECT}/${userId}?redirect=${origin}`;
+    try {
+      // The backend builds the Google consent URL with a signed state tied to
+      // this session, so the user ID never travels in the URL.
+      const { data } = await axiosInstance.post("/google/auth/url", {
+        redirect: window.location.origin,
+      });
+      if (!data?.url) throw new Error("Missing Google auth URL");
+      window.location.href = data.url;
+    } catch (error) {
+      console.error("Error starting Google Calendar connection:", error);
+      setIsLoading(false);
+      toast.error("Couldn't start Google sign-in. Try again.");
+    }
   };
 
   return (

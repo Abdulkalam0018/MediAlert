@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { 
-    redirectToGoogle, 
+    getGoogleAuthUrl,
     handleGoogleCallback,
     syncCalendar,
     disconnectCalendar,
@@ -11,7 +11,10 @@ import {
 const router = Router();
 
 // OAuth routes
-router.get("/auth/:userId", redirectToGoogle);
+// The frontend asks for a signed consent URL (handler returns 401 without a
+// Clerk session), then navigates to it.
+// The old unauthenticated GET /auth/:userId route has been removed on purpose.
+router.post("/auth/url", getGoogleAuthUrl);
 router.get("/auth/google/callback", handleGoogleCallback);
 
 // Calendar management routes

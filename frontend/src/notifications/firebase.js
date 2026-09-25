@@ -18,17 +18,7 @@ const hasFirebaseConfig = Boolean(
 const app = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
 export const messaging = app ? getMessaging(app) : null;
 
-// Register Service Worker for background notifications
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker
-    .register('/firebase-messaging-sw.js')
-    .then(() => {
-      console.log('Service Worker registered successfully:');
-    })
-    .catch((error) => {
-      console.error('Service Worker registration failed:', error);
-    });
-}
+// The Service Worker is registered once in main.jsx.
 
 export const generateFirebaseToken = async () => {
   try {

@@ -90,7 +90,7 @@ const createMessage = (role, text, source = null, action = null) => ({
 function GlowingOrb({ size = "medium", isListening = false, isThinking = false }) {
   return (
     <div className="ai-orb-wrapper">
-      <div className={`ai-orb-sphere ${size} ${isListening ? "ai-orb-listening" : ""}`}>
+      <div className={`ai-orb-sphere ${size} ${isListening ? "ai-orb-listening" : isThinking ? "ai-orb-thinking" : ""}`}>
         <div className="ai-orb-glow-ring" />
         <div className="ai-orb-eyes">
           <span className="ai-orb-eye" />

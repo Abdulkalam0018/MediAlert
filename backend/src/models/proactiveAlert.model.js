@@ -52,6 +52,9 @@ const proactiveAlertSchema = new Schema(
 );
 
 proactiveAlertSchema.index({ userId: 1, scheduledDate: 1, timing: 1 });
+// At most one alert per dose. If old duplicate rows exist this index won't
+// build until they are removed; the alert job also checks explicitly.
+proactiveAlertSchema.index({ trackId: 1, timing: 1 }, { unique: true });
 
 export const ProactiveAlert = mongoose.model(
   "ProactiveAlert",

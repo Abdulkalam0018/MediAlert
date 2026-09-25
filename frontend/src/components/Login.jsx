@@ -17,7 +17,7 @@ function Login() {
   useEffect(() => {
     const syncUser = async () => {
       try {
-        const res = await axiosInstance.get("/users/sync");
+        await axiosInstance.get("/users/sync");
         setSynced(true);
       } catch (err) {
         console.error("Sync failed:", err);

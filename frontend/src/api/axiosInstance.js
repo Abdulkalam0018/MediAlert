@@ -39,4 +39,17 @@ export const setClerkTokenGetter = (getter) => {
   );
 };
 
+/**
+ * Fresh Clerk session token for non-axios callers (e.g. the Socket.IO
+ * handshake). Returns null when signed out or before Clerk has loaded.
+ */
+export const getAuthToken = async () => {
+  if (!getTokenFn) return null;
+  try {
+    return await getTokenFn();
+  } catch {
+    return null;
+  }
+};
+
 export default axiosInstance;

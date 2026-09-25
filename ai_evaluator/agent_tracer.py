@@ -38,12 +38,16 @@ _root = Path(__file__).resolve().parent.parent
 load_dotenv(_root / "backend" / ".env")
 
 GEMINI_API_KEY   = os.getenv("GEMINI_API_KEY", "")
-INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "medialert-internal-agent-key-2025")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 BACKEND_URL      = os.getenv("BACKEND_URL", "http://localhost:8000")
 GEMINI_MODEL     = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not GEMINI_API_KEY:
     print("[ERROR] GEMINI_API_KEY not set. Add it to backend/.env")
+    sys.exit(1)
+
+if not INTERNAL_API_KEY:
+    print("[ERROR] INTERNAL_API_KEY not set. Add a long random value to backend/.env")
     sys.exit(1)
 
 # ── Logging setup ─────────────────────────────────────────────────────────────

@@ -1,11 +1,15 @@
+/* eslint-env serviceworker */
+/* global importScripts, firebase */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // firebase-messaging-sw.js
 // MediAlert Service Worker
 //
 // Responsibilities:
-//  1. FCM background push notifications (existing)
-//  2. Cache today's medication schedule (Cache API) so it loads offline
-//  3. Background Sync — replay queued dose updates when internet returns
+//  1. FCM background push notifications
+//  2. Offline app shell (index.html + hashed /assets) so the app opens offline
+//  3. Cache each day's schedule response so it loads offline
+//  4. Background Sync — wake open tabs so they replay doses logged offline
 // ─────────────────────────────────────────────────────────────────────────────
 
 importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
@@ -24,155 +28,157 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage(function(payload) {
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: payload.notification.image || '/vite.svg'
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+messaging.onBackgroundMessage((payload) => {
+  // Messages with a `notification` block (everything the backend sends) are
+  // already displayed by the FCM SDK. Showing them here as well made every
+  // reminder appear twice. Only data-only messages need manual display.
+  if (payload.notification) return;
+
+  const title = payload.data?.title;
+  if (!title) return;
+
+  self.registration.showNotification(title, {
+    body: payload.data?.body,
+    icon: '/vite.svg',
+    data: payload.data,
+  });
 });
 
-// ── 2. Cache API — cache today's schedule response ───────────────────────────
-const CACHE_NAME = "medialert-schedule-v1";
+// ── Cache setup ──────────────────────────────────────────────────────────────
+const SHELL_CACHE = "medialert-shell-v1";
+// v2: the v1 schedule cache was never cleared between users; the app now
+// clears "medialert-schedule*" caches on sign-out / account switch.
+const SCHEDULE_CACHE = "medialert-schedule-v2";
+const CURRENT_CACHES = [SHELL_CACHE, SCHEDULE_CACHE];
+const SHELL_URL = "/index.html";
 
-// Cache the schedule API response when it's fetched online
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(SHELL_CACHE)
+      .then((cache) => cache.addAll(["/", SHELL_URL]))
+      .catch(() => {
+        // Offline during install: the shell gets cached on the next online visit.
+      })
+      .then(() => self.skipWaiting())
+  );
+});
 
-  // Only cache GET requests to the tracks/date/* endpoint
-  if (
-    event.request.method === "GET" &&
-    url.pathname.includes("/api/v1/tracks/date/")
-  ) {
-    event.respondWith(
-      fetch(event.request.clone())
-        .then((response) => {
-          // Save fresh response to cache
-          if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Offline — serve from cache
-          return caches.match(event.request).then((cached) => {
-            if (cached) {
-              console.log("[SW] Serving schedule from cache (offline)");
-              return cached;
-            }
-            // No cache either — return empty JSON so UI doesn't crash
-            return new Response(
-              JSON.stringify({ medications: [], offline: true }),
-              { headers: { "Content-Type": "application/json" } }
-            );
-          });
-        })
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key.startsWith("medialert-") && !CURRENT_CACHES.includes(key))
+          .map((key) => caches.delete(key))
+      );
+      // Take control of open tabs right away so offline caching works
+      // without a second reload.
+      await self.clients.claim();
+    })()
+  );
+});
+
+// ── 2 & 3. Fetch handling ────────────────────────────────────────────────────
+const cacheResponse = (cacheName, key, response) => {
+  if (!response || !(response.ok || response.type === "opaque")) return;
+  const copy = response.clone();
+  caches.open(cacheName).then((cache) => cache.put(key, copy)).catch(() => {});
+};
+
+// Page loads: network first, fall back to the cached SPA shell.
+async function handleNavigation(request) {
+  try {
+    const response = await fetch(request);
+    // Every SPA route returns the same index.html, so store it under one key.
+    if (response.ok && !response.redirected) cacheResponse(SHELL_CACHE, SHELL_URL, response);
+    return response;
+  } catch {
+    const cache = await caches.open(SHELL_CACHE);
+    const cached = (await cache.match(SHELL_URL)) || (await cache.match("/"));
+    if (cached) return cached;
+    return new Response(
+      "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><title>MediAlert</title><body style='font-family:system-ui;text-align:center;padding:20vh 1.5rem'><h2>You're offline</h2><p>Open MediAlert once while online so it can work offline next time.</p></body>",
+      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
   }
+}
+
+// Vite's /assets/* files have content hashes in their names, so they never change.
+async function handleImmutableAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  cacheResponse(SHELL_CACHE, request, response);
+  return response;
+}
+
+// Clerk's browser SDK (loaded from Clerk's CDN): serve the cached copy
+// immediately and refresh it in the background.
+async function handleStaleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+  const network = fetch(request)
+    .then((response) => {
+      cacheResponse(SHELL_CACHE, request, response);
+      return response;
+    })
+    .catch(() => null);
+  return cached || (await network) || Response.error();
+}
+
+// Schedule API: network first, cached copy when offline.
+async function handleSchedule(request) {
+  try {
+    const response = await fetch(request);
+    cacheResponse(SCHEDULE_CACHE, request, response);
+    return response;
+  } catch {
+    const cache = await caches.open(SCHEDULE_CACHE);
+    const cached = await cache.match(request, { ignoreVary: true });
+    if (cached) return cached;
+    // No cached copy of this day. The app shows "not saved on this device".
+    return new Response(JSON.stringify({ medications: [], offline: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  const sameOrigin = url.origin === self.location.origin;
+
+  if (request.mode === "navigate" && sameOrigin) {
+    event.respondWith(handleNavigation(request));
+  } else if (sameOrigin && url.pathname.startsWith("/assets/")) {
+    event.respondWith(handleImmutableAsset(request));
+  } else if (url.pathname.includes("/api/v1/tracks/date/")) {
+    event.respondWith(handleSchedule(request));
+  } else if (!sameOrigin && url.pathname.includes("/npm/@clerk/")) {
+    event.respondWith(handleStaleWhileRevalidate(request));
+  }
 });
 
-// ── 3. Background Sync — replay queued dose updates ──────────────────────────
-const DB_NAME = "medialert-offline";
-const STORE_NAME = "dose-queue";
+// ── 4. Background Sync ───────────────────────────────────────────────────────
+// The SW does NOT replay dose updates itself anymore. The API needs a Clerk
+// session token, which expires within about a minute and can't be refreshed
+// from here, so SW replays always failed with 401. Instead we wake any open
+// MediAlert tab, and the page flushes the queue with a fresh token. With no
+// tab open, the queue is flushed the next time the app is opened.
 const SYNC_TAG = "medialert-dose-sync";
 
-// Open IndexedDB from inside the Service Worker
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-      }
-    };
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = (e) => reject(e.target.error);
-  });
-}
-
-function getAllQueued(db) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const req = tx.objectStore(STORE_NAME).getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = (e) => reject(e.target.error);
-  });
-}
-
-function deleteQueued(db, id) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const req = tx.objectStore(STORE_NAME).delete(id);
-    req.onsuccess = () => resolve();
-    req.onerror = (e) => reject(e.target.error);
-  });
-}
-
-// Fired by the browser when internet is restored
 self.addEventListener("sync", (event) => {
-  if (event.tag === SYNC_TAG) {
-    console.log("[SW] Background Sync triggered — replaying offline dose queue");
-    event.waitUntil(replayQueue());
-  }
+  if (event.tag !== SYNC_TAG) return;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => {
+        windows.forEach((client) => client.postMessage({ type: "FLUSH_OFFLINE_QUEUE" }));
+      })
+  );
 });
-
-async function replayQueue() {
-  const db = await openDB();
-  const queue = await getAllQueued(db);
-
-  if (queue.length === 0) {
-    console.log("[SW] Queue is empty — nothing to sync");
-    return;
-  }
-
-  console.log(`[SW] Replaying ${queue.length} queued dose update(s)...`);
-
-  for (const action of queue) {
-    try {
-      const apiBase = self.location.origin.includes("localhost")
-        ? "http://localhost:8000/api/v1"
-        : "/api/v1";
-
-      const response = await fetch(`${apiBase}/tracks/${action.trackId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          // Auth token stored by the app in localStorage
-          ...(action.authToken
-            ? { Authorization: `Bearer ${action.authToken}` }
-            : {}),
-        },
-        body: JSON.stringify({
-          status: action.status,
-          time: action.time,
-        }),
-      });
-
-      if (response.ok) {
-        console.log(`[SW] ✅ Synced dose: ${action.trackId} → ${action.status}`);
-        await deleteQueued(db, action.id);
-
-        // Notify the app that sync completed so UI can refresh
-        self.clients.matchAll().then((clients) => {
-          clients.forEach((client) => {
-            client.postMessage({
-              type: "OFFLINE_SYNC_COMPLETE",
-              trackId: action.trackId,
-              status: action.status,
-            });
-          });
-        });
-      } else {
-        console.warn(`[SW] ⚠️ Sync failed for ${action.trackId}: ${response.status}`);
-      }
-    } catch (err) {
-      console.error("[SW] Replay error:", err);
-      // Keep in queue — will retry on next sync event
-    }
-  }
-}

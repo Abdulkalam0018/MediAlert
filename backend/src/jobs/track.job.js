@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { generateDailyTracks, syncCalendarForAllUsers } from "../utils/sync.js";
+import { APP_TIMEZONE } from "../config/timezone.js";
 
 const runDailyTrackJob = async (source = "manual") => {
   console.log(`[${new Date().toISOString()}] Running generateDailyTracks (triggered by: ${source})`);
@@ -19,7 +20,10 @@ const runDailyTrackJob = async (source = "manual") => {
 // 1. Run once immediately when the server starts/restarts
 runDailyTrackJob("server_start");
 
-// Schedule daily track generation at midnight (00:00)
-cron.schedule("0 0 * * *", async () => {
-  runDailyTrackJob("scheduled_cron_job");
+// 2. Midnight in the app timezone (not the host's UTC midnight, which is 05:30 IST)
+cron.schedule("0 0 * * *", () => runDailyTrackJob("scheduled_cron_job"), {
+  timezone: APP_TIMEZONE,
+  noOverlap: true,
 });
+
+export { runDailyTrackJob };

@@ -3,6 +3,7 @@ import { Track } from "../models/track.model.js";
 import { getUserId, notifyRealtimeUser } from "../utils/clerk.js";
 import { getRedisClient } from "../config/redis.js";
 import { createTracksForDate } from "./track.controller.js";
+import { deleteCalendarEventsForUser, syncCalendarForUser } from "../utils/sync.js";
 
 const invalidateUserTracksCache = async (userId) => {
     const redisClient = getRedisClient();
@@ -201,26 +202,48 @@ const updateElixir = async (req, res) => {
             });
 
             if (todayTrack && timings) {
-                const takenTimes = new Map();
-                todayTrack.timings.forEach(t => {
-                    if (t.status === 'taken') {
-                        takenTimes.set(`${new Date(t.time).getHours()}:${new Date(t.time).getMinutes()}`, t);
-                    }
-                });
-                todayTrack.timings = parsedTimings.map(t => {
+                // Keep whatever the user already logged for times that didn't
+                // change (taken, missed or delayed, not only taken), and keep
+                // their calendar event so it isn't recreated.
+                const timeKey = (value) => {
+                    const d = new Date(value);
+                    return `${d.getHours()}:${d.getMinutes()}`;
+                };
+                const previousByTime = new Map();
+                todayTrack.timings.forEach(t => previousByTime.set(timeKey(t.time), t));
+
+                const nextTimings = parsedTimings.map(t => {
                     const origTime = new Date(t);
-                    const timingDate = new Date();
+                    const timingDate = new Date(todayTrack.scheduledDate);
                     timingDate.setHours(origTime.getHours(), origTime.getMinutes(), origTime.getSeconds(), 0);
-                    const key = `${origTime.getHours()}:${origTime.getMinutes()}`;
-                    const prevTaken = takenTimes.get(key);
-                    return {
-                        time: timingDate,
-                        status: prevTaken ? 'taken' : 'pending',
-                        takenAt: prevTaken ? prevTaken.takenAt : null
-                    };
+                    const previous = previousByTime.get(timeKey(origTime));
+                    previousByTime.delete(timeKey(origTime));
+                    if (previous) {
+                        return {
+                            _id: previous._id,
+                            time: timingDate,
+                            status: previous.status,
+                            takenAt: previous.takenAt || null,
+                            calendarEventId: previous.calendarEventId,
+                            lastSyncedAt: previous.lastSyncedAt,
+                        };
+                    }
+                    return { time: timingDate, status: 'pending' };
                 });
+
+                // Anything left over was removed from the schedule.
+                const removedEventIds = [...previousByTime.values()]
+                    .map(t => t.calendarEventId)
+                    .filter(Boolean);
+
+                todayTrack.timings = nextTimings;
                 todayTrack.markModified("timings");
                 await todayTrack.save();
+
+                if (removedEventIds.length) {
+                    deleteCalendarEventsForUser(user_id, removedEventIds);
+                }
+                syncCalendarForUser(user_id).catch(() => {});
             } else if (!todayTrack) {
                 await createTracksForDate(user_id, new Date());
             }
@@ -253,11 +276,16 @@ const extendEndDate = async (req, res) => {
             return res.status(404).json({ message: "Elixir not found." });
         }
 
-        if (!additionalDays || isNaN(additionalDays) || additionalDays <= 0) {
+        additionalDays = Number(additionalDays);
+        if (!Number.isInteger(additionalDays) || additionalDays <= 0) {
             return res.status(400).json({ message: "Invalid additionalDays value." });
         }
 
-        elixir.endDate.setDate(elixir.endDate.getDate() + additionalDays);
+        // Number() matters: a JSON string "7" used to be string-concatenated
+        // into setDate(getDate() + "7"), e.g. setDate("257").
+        const newEndDate = new Date(elixir.endDate);
+        newEndDate.setDate(newEndDate.getDate() + additionalDays);
+        elixir.endDate = newEndDate;
         await elixir.save();
         await invalidateUserTracksCache(user_id);
         notifyUserRealtime(req, user_id, { action: "extend", elixir });
@@ -310,10 +338,34 @@ const deleteElixir = async (req, res) => {
             return res.status(401).json({ message: "Unauthorized: No user ID found in the request." });
         }
 
-        const elixir = await Elixir.findOneAndDelete({ _id: id, userId: user_id });
+        const elixir = await Elixir.findOne({ _id: id, userId: user_id }).select("_id");
         if (!elixir) {
             return res.status(404).json({ message: "Elixir not found." });
         }
+
+        // Collect today's and future calendar events first: the Elixir model's
+        // findOneAndDelete hook removes all of this medication's tracks.
+        let eventIds = [];
+        try {
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const upcoming = await Track.find({ elixirId: elixir._id, scheduledDate: { $gte: startOfToday } })
+                .select("timings.calendarEventId")
+                .lean();
+            eventIds = upcoming.flatMap(t => t.timings.map(timing => timing.calendarEventId)).filter(Boolean);
+        } catch (lookupError) {
+            console.error("Error collecting calendar events for deleted elixir:", lookupError);
+        }
+
+        const deleted = await Elixir.findOneAndDelete({ _id: id, userId: user_id });
+        if (!deleted) {
+            return res.status(404).json({ message: "Elixir not found." });
+        }
+
+        if (eventIds.length) {
+            deleteCalendarEventsForUser(user_id, eventIds);
+        }
+
         await invalidateUserTracksCache(user_id);
         notifyUserRealtime(req, user_id, { action: "delete", elixirId: id });
 

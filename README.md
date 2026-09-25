@@ -131,27 +131,33 @@ MediAlert works even without internet — doses marked offline are queued locall
 
 ### How it works
 ```
-User offline → taps "Mark Taken"
+User taps "Mark Taken" (offline, or the request fails with a network error)
       ↓
 Optimistic UI update (instant)
       ↓
-Writes to IndexedDB (dose-queue store)
+Saved to IndexedDB (one entry per dose; a newer status replaces an older one)
       ↓
-Background Sync tag registered with Service Worker
+Schedule reloads overlay queued statuses, so doses don't flip back to "pending"
       ↓
-Internet restored → browser fires 'sync' event
+Back online / app reopened / Background Sync wakes the tab
       ↓
-Service Worker replays PATCH /api/v1/tracks/:id
+Page replays PATCH /api/v1/tracks/:id with a fresh Clerk token
+(taken doses keep the time they were actually marked)
       ↓
-App receives postMessage → UI refreshes
+UI refreshes; doses that no longer exist are reported and dropped
 ```
+
+The Service Worker never replays requests itself: the API needs a Clerk
+session token, which expires within about a minute and can't be refreshed
+from a Service Worker.
 
 | Layer | Technology | File |
 |---|---|---|
-| Offline queue | IndexedDB | `src/utils/offlineQueue.js` |
-| Schedule cache | Cache API | `public/firebase-messaging-sw.js` |
-| Auto-sync | Background Sync API | `public/firebase-messaging-sw.js` |
-| Online/offline banner | `navigator.onLine` + events | `TodaySchedule.jsx` |
+| Offline queue + replay | IndexedDB | `src/utils/offlineQueue.js` |
+| Replay triggers | `online` event, app start, SW message | `src/hooks/useOfflineSync.js` |
+| App shell + schedule cache | Cache API | `public/firebase-messaging-sw.js` |
+| Wake-up when connectivity returns | Background Sync API (Chromium) | `public/firebase-messaging-sw.js` |
+| Offline / pending-sync banner | `navigator.onLine` + queue count | `TodaySchedule.jsx` |
 
 ---
 
@@ -241,7 +247,6 @@ pip3 install google-genai requests python-dotenv
 ```env
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 VITE_APP_API_URL=http://localhost:8000/api/v1
-VITE_CALENDAR_AUTH_REDIRECT=http://localhost:8000/api/v1/google/auth
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
@@ -263,7 +268,9 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/google/auth/google/callback
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
-INTERNAL_API_KEY=your_internal_agent_key
+OAUTH_STATE_SECRET=long_random_string        # signs the Google OAuth state
+INTERNAL_API_KEY=long_random_string_24plus   # Python agent routes; empty = disabled
+APP_TIMEZONE=Asia/Kolkata                    # "today", dose times and cron schedules
 ```
 
 ### Run
@@ -291,7 +298,7 @@ Base URL: `/api/v1`
 | GET | `/tracks/today` | Clerk | Today's dose schedule |
 | GET | `/tracks/adherence` | Clerk | Adherence statistics |
 | PATCH | `/tracks/:id` | Clerk | Mark dose taken/missed/delayed |
-| GET | `/google/auth/:userId` | — | Start Google OAuth |
+| POST | `/google/auth/url` | Clerk | Get a signed Google OAuth consent URL |
 | POST | `/ai/ask` | Clerk | Ask the AI assistant |
 | GET | `/internal/medications/:userId` | API Key | Python agent — medications |
 | GET | `/internal/today/:userId` | API Key | Python agent — today's doses |

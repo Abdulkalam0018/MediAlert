@@ -4,6 +4,27 @@ import { User } from "../models/user.model.js";
 import dayjs from "dayjs";
 import { google } from 'googleapis';
 
+/**
+ * Inserts tracks, skipping any that already exist. The unique index on
+ * (elixirId, scheduledDate) can be hit when the midnight job and a user's
+ * GET /tracks/today create the same day's track at the same moment; before,
+ * that threw and either failed the request or skipped the whole elixir.
+ */
+export const insertTracksIgnoringDuplicates = async (tracks) => {
+  if (!tracks.length) return 0;
+  try {
+    const inserted = await Track.insertMany(tracks, { ordered: false });
+    return inserted.length;
+  } catch (error) {
+    const writeErrors = error?.writeErrors || error?.result?.writeErrors || [];
+    const onlyDuplicates =
+      error?.code === 11000 ||
+      (writeErrors.length > 0 && writeErrors.every((e) => (e.code ?? e.err?.code) === 11000));
+    if (!onlyDuplicates) throw error;
+    return error?.insertedDocs?.length ?? error?.result?.insertedCount ?? 0;
+  }
+};
+
 const processElixirsAndGenerateTracks = async (elixirs) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -72,8 +93,7 @@ const processElixirsAndGenerateTracks = async (elixirs) => {
       }));
   
       if (tracks.length) {
-        await Track.insertMany(tracks);
-        tracksCreated += tracks.length;
+        tracksCreated += await insertTracksIgnoringDuplicates(tracks);
       }
     
     } catch (error) {
@@ -164,6 +184,20 @@ const refreshGoogleToken = async (user) => {
     return oauth2Client;
   } catch (error) {
     console.error(`Error refreshing token for user ${user._id}:`, error.message);
+
+    // The user revoked access or the refresh token expired. Retrying every
+    // 6 hours will never succeed, so mark the calendar as disconnected and let
+    // the UI prompt them to reconnect.
+    if (isInvalidGrantError(error)) {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: { allowCalendarSync: false },
+          $unset: { googleTokens: 1 },
+        }
+      );
+      console.warn(`Google access revoked for user ${user._id}; calendar sync disabled until they reconnect.`);
+    }
     throw error;
   }
 };
@@ -183,100 +217,131 @@ const getValidOAuth2Client = async (user) => {
   return createOAuth2Client(user);
 };
 
+const formatEventTime = (date) =>
+  new Date(date).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: process.env.TZ,
+  });
+
 /**
- * Processes tracks and syncs them to Google Calendar
+ * Deterministic Google Calendar event ID for one dose. Google allows
+ * client-chosen IDs (base32hex: 0-9, a-v), and Mongo ObjectIds are hex, so
+ * this is valid. Re-inserting the same dose returns 409 instead of creating a
+ * duplicate event, which makes sync idempotent even if a run crashes midway.
+ */
+const eventIdForTiming = (trackId, timingId) => `ma${String(trackId)}${String(timingId)}`;
+
+const isAlreadyExistsError = (error) =>
+  error?.code === 409 || error?.status === 409 || error?.response?.status === 409;
+
+const isInvalidGrantError = (error) =>
+  error?.response?.data?.error === "invalid_grant" || /invalid_grant/i.test(error?.message || "");
+
+/**
+ * Records the event on the timing with this _id. Loading the full track and
+ * addressing the timing by _id means the right array element is updated; the
+ * old code saved a filtered copy of the array, which wrote event IDs to the
+ * wrong index. Mongoose's version key makes the save fail (and the next sync
+ * retry) if the timings array was rebuilt in the meantime.
+ */
+const markTimingSynced = async (trackId, timingId, eventId) => {
+  const track = await Track.findById(trackId);
+  const timing = track?.timings.id(timingId);
+  if (!timing) return; // dose was removed since the sync started
+  timing.calendarEventId = eventId;
+  timing.lastSyncedAt = new Date();
+  await track.save();
+};
+
+/**
+ * Processes tracks and syncs them to Google Calendar.
+ *
+ * Tracks come in as lean objects; each synced timing is recorded by its own
+ * _id (see markTimingSynced).
  */
 const processTracksAndSyncToCalendar = async (tracks, user) => {
   let eventsCreated = 0;
   let eventsFailed = 0;
 
-  try {
-    const oauth2Client = await getValidOAuth2Client(user);
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const oauth2Client = await getValidOAuth2Client(user);
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    for (const track of tracks) {
-      const elixir = track.elixirId;
-      
-      for (const timing of track.timings) {
-        // Skip if already synced
-        if (timing.calendarEventId) {
-          continue;
-        }
+  for (const track of tracks) {
+    const elixir = track.elixirId;
+    if (!elixir) continue; // medication was deleted
+
+    for (const timing of track.timings) {
+      if (timing.calendarEventId) continue;
+
+      const eventId = eventIdForTiming(track._id, timing._id);
+
+      try {
+        const startDateTime = new Date(timing.time);
+        // End time is 30 minutes after start (for medication taking)
+        const endDateTime = new Date(startDateTime.getTime() + 30 * 60 * 1000);
+
+        const event = {
+          id: eventId,
+          summary: `💊 Take ${elixir.name}`,
+          description: `Medication: ${elixir.name}\n` +
+                      `Dosage: ${elixir.dosage || 'Not specified'}\n` +
+                      `Frequency: ${elixir.frequency}\n` +
+                      `Notes: ${elixir.notes || 'None'}\n\n` +
+                      `Scheduled time: ${formatEventTime(startDateTime)}`,
+          start: { dateTime: startDateTime.toISOString(), timeZone: process.env.TZ },
+          end: { dateTime: endDateTime.toISOString(), timeZone: process.env.TZ },
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 15 },
+              { method: 'popup', minutes: 5 },
+            ],
+          },
+          colorId: '11', // Red color for medication reminders
+        };
 
         try {
-          
-          // Create start time by combining scheduled date with timing
-          const startDateTime = timing.time
-          
-          // End time is 30 minutes after start (for medication taking)
-          const endDateTime = new Date(startDateTime);
-          endDateTime.setMinutes(endDateTime.getMinutes() + 30);
-
-          // Create calendar event
-          const event = {
-            summary: `💊 Take ${elixir.name}`,
-            description: `Medication: ${elixir.name}\n` +
-                        `Dosage: ${elixir.dosage || 'Not specified'}\n` +
-                        `Frequency: ${elixir.frequency}\n` +
-                        `Notes: ${elixir.notes || 'None'}\n\n` +
-                        `Scheduled time: ${timing.time}`,
-            start: {
-              dateTime: startDateTime.toISOString(),
-              timeZone: 'UTC',
-            },
-            end: {
-              dateTime: endDateTime.toISOString(),
-              timeZone: 'UTC',
-            },
-            reminders: {
-              useDefault: false,
-              overrides: [
-                { method: 'popup', minutes: 15 },
-                { method: 'popup', minutes: 5 },
-              ],
-            },
-            colorId: '11', // Red color for medication reminders
-          };
-
-          const response = await calendar.events.insert({
-            calendarId: 'primary',
-            requestBody: event,
-          });
-
-          // Update timing with calendar event ID
-          timing.calendarEventId = response.data.id;
-          timing.lastSyncedAt = new Date();
-          
-          await track.save();
+          await calendar.events.insert({ calendarId: 'primary', requestBody: event });
           eventsCreated++;
-
-          
-          // Add small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
-          eventsFailed++;
-          console.error(`Error creating calendar event for track ${track._id}, timing ${timing.time}:`, error.message);
-          continue;
+          // Already created by an earlier (possibly interrupted) run.
+          if (!isAlreadyExistsError(error)) throw error;
         }
+
+        await markTimingSynced(track._id, timing._id, eventId);
+
+        // Add small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        eventsFailed++;
+        console.error(`Error creating calendar event for track ${track._id}, timing ${timing.time}:`, error.message);
       }
     }
-
-    return { eventsCreated, eventsFailed };
-  } catch (error) {
-    console.error(`Error in processTracksAndSyncToCalendar for user ${user._id}:`, error.message);
-    throw error;
   }
+
+  return { eventsCreated, eventsFailed };
 };
+
+// One sync per user at a time (cron + "sync now" button + OAuth callback can overlap).
+const inFlightUserSyncs = new Map();
 
 /**
  * Syncs calendar for a specific user
  */
-const syncCalendarForUser = async (userId) => {
+const syncCalendarForUser = (userId) => {
+  const key = String(userId);
+  if (inFlightUserSyncs.has(key)) return inFlightUserSyncs.get(key);
 
+  const run = runSyncCalendarForUser(userId).finally(() => inFlightUserSyncs.delete(key));
+  inFlightUserSyncs.set(key, run);
+  return run;
+};
+
+const runSyncCalendarForUser = async (userId) => {
   const today = dayjs().startOf("day").toDate();
 
   try {
-    // Find user and validate
     const user = await User.findById(userId);
     
     if (!user) {
@@ -291,7 +356,7 @@ const syncCalendarForUser = async (userId) => {
       return { eventsCreated: 0, eventsFailed: 0, message: 'Google Calendar not connected' };
     }
 
-    // Fetch active tracks that need syncing (today and future)
+    // Fetch today's and future tracks; unsynced doses are filtered below.
     const tracks = await Track.find({
       userId,
       scheduledDate: { $gte: today },
@@ -299,96 +364,91 @@ const syncCalendarForUser = async (userId) => {
     .populate('elixirId')
     .lean();
 
-    if (tracks.length === 0) {
-      return { eventsCreated: 0, eventsFailed: 0, message: 'No tracks to sync' };
-    }
-
-    // Filter tracks with timings that don't have calendar events
-    const tracksToSync = tracks.filter(track => 
-      track.timings.some(timing => !timing.calendarEventId)
-    ).map(track => ({
-      ...track,
-      timings: track.timings.filter(timing => !timing.calendarEventId)
-    }));
+    const tracksToSync = tracks
+      .map(track => ({ ...track, timings: track.timings.filter(timing => !timing.calendarEventId) }))
+      .filter(track => track.timings.length > 0);
 
     if (tracksToSync.length === 0) {
       return { eventsCreated: 0, eventsFailed: 0, message: 'All tracks already synced' };
     }
 
-    // Convert lean documents back to Mongoose documents for save()
-    const tracksWithModels = tracksToSync.map(trackData => Track.hydrate(trackData));
+    const result = await processTracksAndSyncToCalendar(tracksToSync, user);
 
-    const result = await processTracksAndSyncToCalendar(tracksWithModels, user);
+    await User.updateOne({ _id: user._id }, { $set: { lastCalendarSync: new Date() } });
 
-    // Update last sync timestamp
-    user.lastCalendarSync = new Date();
-    await user.save();
-
-    
     return {
       ...result,
       message: `Successfully synced ${result.eventsCreated} events`,
     };
   } catch (error) {
-    console.error(`Error in syncCalendarForUser for user ${userId}:`, error);
+    console.error(`Error in syncCalendarForUser for user ${userId}:`, error.message);
     throw error;
   }
 };
 
+let allUsersSyncInFlight = null;
+
 /**
- * Syncs calendar for all eligible users
+ * Syncs calendar for all eligible users. Concurrent callers share one run.
  */
-const syncCalendarForAllUsers = async () => {
-  // console.log(`🔄 Running calendar sync for all users at ${new Date().toLocaleString()}`);
-  
-  try {
-    // Find all users with calendar sync enabled and Google tokens
-    const users = await User.find({
-      allowCalendarSync: true,
-      'googleTokens.access_token': { $exists: true, $ne: null },
-      'googleTokens.refresh_token': { $exists: true, $ne: null },
+const syncCalendarForAllUsers = () => {
+  if (!allUsersSyncInFlight) {
+    allUsersSyncInFlight = runSyncCalendarForAllUsers().finally(() => {
+      allUsersSyncInFlight = null;
     });
+  }
+  return allUsersSyncInFlight;
+};
 
-    if (users.length === 0) {
-      return { usersProcessed: 0, totalEventsCreated: 0, totalEventsFailed: 0, errors: [] };
+const runSyncCalendarForAllUsers = async () => {
+  const users = await User.find({
+    allowCalendarSync: true,
+    'googleTokens.access_token': { $exists: true, $ne: null },
+    'googleTokens.refresh_token': { $exists: true, $ne: null },
+  }).select('_id');
+
+  let usersProcessed = 0;
+  let totalEventsCreated = 0;
+  let totalEventsFailed = 0;
+  const errors = [];
+
+  for (const user of users) {
+    try {
+      const result = await syncCalendarForUser(user._id);
+      usersProcessed++;
+      totalEventsCreated += result.eventsCreated;
+      totalEventsFailed += result.eventsFailed;
+      
+      // Add delay between users to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      errors.push({ userId: user._id, error: error.message });
     }
+  }
 
+  return { usersProcessed, totalEventsCreated, totalEventsFailed, errors };
+};
 
-    let usersProcessed = 0;
-    let totalEventsCreated = 0;
-    let totalEventsFailed = 0;
-    const errors = [];
+/**
+ * Best-effort removal of calendar events (used when doses are removed or a
+ * medication is deleted). Never throws.
+ */
+const deleteCalendarEventsForUser = async (userId, eventIds = []) => {
+  const ids = [...new Set(eventIds.filter(Boolean))];
+  if (ids.length === 0) return 0;
 
-    for (const user of users) {
-      try {
-        const result = await syncCalendarForUser(user._id);
-        usersProcessed++;
-        totalEventsCreated += result.eventsCreated;
-        totalEventsFailed += result.eventsFailed;
-        
-        // Add delay between users to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        errors.push({
-          userId: user._id,
-          error: error.message,
-        });
-        console.error(`Failed to sync calendar for user ${user._id}:`, error.message);
-        continue;
-      }
+  try {
+    const user = await User.findById(userId);
+    if (!user?.googleTokens?.access_token || !user?.googleTokens?.refresh_token) return 0;
+
+    let deleted = 0;
+    for (const eventId of ids) {
+      if (await deleteCalendarEvent(eventId, user)) deleted++;
     }
-
-    // console.log(`✅ Calendar sync completed for all users. Users: ${usersProcessed}, Events created: ${totalEventsCreated}, Failed: ${totalEventsFailed}`);
-    
-    return {
-      usersProcessed,
-      totalEventsCreated,
-      totalEventsFailed,
-      errors,
-    };
+    return deleted;
   } catch (error) {
-    console.error('Error in syncCalendarForAllUsers:', error);
-    throw error;
+    console.error(`Error deleting calendar events for user ${userId}:`, error.message);
+    return 0;
   }
 };
 
@@ -407,6 +467,8 @@ const deleteCalendarEvent = async (eventId, user) => {
 
     return true;
   } catch (error) {
+    const status = error?.code || error?.response?.status;
+    if (status === 404 || status === 410) return true; // already gone
     console.error(`Error deleting calendar event ${eventId}:`, error.message);
     return false;
   }
@@ -439,6 +501,7 @@ export {
     syncCalendarForUser,
     syncCalendarForAllUsers,
     deleteCalendarEvent,
+    deleteCalendarEventsForUser,
     updateCalendarEvent,
     refreshGoogleToken,
     createOAuth2Client

@@ -1,8 +1,11 @@
 import { google } from 'googleapis';
 import {User} from '../models/user.model.js'; 
+import { Track } from '../models/track.model.js';
 import { getAuth } from '@clerk/express';
 import { syncCalendarForUser } from '../utils/sync.js';
 import { getUserId } from '../utils/clerk.js';
+import { createOAuthState, verifyOAuthState } from '../utils/oauthState.js';
+import { isAllowedOrigin, getDefaultFrontendUrl } from '../config/origins.js';
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -15,44 +18,50 @@ const scope = [
     'https://www.googleapis.com/auth/calendar.events'
 ];
 
-const redirectToGoogle = (req, res) => {
-    const { userId } = req.params;
-    const redirectUrl = req.query.redirect || req.headers.referer || process.env.FRONTEND_URL || 'http://localhost:5173';
+const resolveRedirectOrigin = (candidate) => {
+    if (!candidate) return getDefaultFrontendUrl();
+    try {
+        const { origin } = new URL(candidate);
+        return isAllowedOrigin(origin) ? origin : getDefaultFrontendUrl();
+    } catch {
+        return getDefaultFrontendUrl();
+    }
+};
 
-    // Encode userId and redirectUrl into the state string
-    const state = Buffer.from(JSON.stringify({ userId, redirectUrl })).toString('base64');
-    
+/**
+ * POST /google/auth/url  (requires Clerk auth)
+ * Returns a Google consent URL whose `state` is signed and bound to the
+ * signed-in user. The user ID comes from the session, never from the URL.
+ */
+const getGoogleAuthUrl = (req, res) => {
+    const clerkId = getAuth(req)?.userId;
+    if (!clerkId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const redirectOrigin = resolveRedirectOrigin(req.body?.redirect || req.get('origin'));
+
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline', // important to get refresh token
         prompt: 'consent',
         scope: scope,
-        state: state
+        state: createOAuthState({ clerkId, redirectOrigin }),
     });
-    res.redirect(authUrl);
+
+    return res.status(200).json({ url: authUrl });
 };
 
 const handleGoogleCallback = async (req, res) => {
     const code = req.query.code;
-    let userId = null;
-    let redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const verified = verifyOAuthState(req.query.state);
 
-    // Decode state parameter safely
-    if (req.query.state) {
-        try {
-            const decoded = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
-            if (decoded.userId) userId = decoded.userId;
-            if (decoded.redirectUrl) redirectUrl = decoded.redirectUrl;
-        } catch {
-            // Fallback if state was passed as raw userId
-            userId = req.query.state;
-        }
+    // Only trust a redirect target that came from a valid signed state *and*
+    // is still on the allow-list; otherwise use the default frontend URL.
+    const cleanOrigin = resolveRedirectOrigin(verified?.redirectOrigin);
+
+    if (!verified) {
+        return res.redirect(`${cleanOrigin}/dashboard?calendar=invalid_state`);
     }
-
-    if (!userId) {
-        userId = getAuth(req)?.userId;
-    }
-
-    const cleanOrigin = (redirectUrl || process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, "");
 
     if (!code) {
         return res.redirect(`${cleanOrigin}/dashboard?calendar=no_code`);
@@ -61,48 +70,31 @@ const handleGoogleCallback = async (req, res) => {
     try {
         const { tokens } = await oauth2Client.getToken(code);
 
-        const updatedUser = await User.findOneAndUpdate(
-            { clerkId: userId }, 
-            {
-                googleTokens: {
-                    access_token: tokens.access_token,
-                    refresh_token: tokens.refresh_token,
-                    expires_date: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-                    last_refresh_at: new Date(),
-                },
-                allowCalendarSync: true, // Enable calendar sync when user connects
-            },
-            { new: true }
-        );
-        
-        if (!updatedUser) {
-            console.error('User not found in DB for clerkId:', userId);
+        const user = await User.findOne({ clerkId: verified.clerkId });
+        if (!user) {
+            console.error('User not found in DB for clerkId:', verified.clerkId);
             return res.redirect(`${cleanOrigin}/dashboard?calendar=user_not_found`);
         }
-        
+
+        user.googleTokens = {
+            access_token: tokens.access_token,
+            // Google only returns a refresh token on some consents; keep the old one if absent.
+            refresh_token: tokens.refresh_token || user.googleTokens?.refresh_token,
+            expires_date: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+            last_refresh_at: new Date(),
+        };
+        user.allowCalendarSync = true; // Enable calendar sync when user connects
+        await user.save();
+
         // Trigger initial calendar sync in background
-        syncCalendarForUser(updatedUser._id).catch(err => {
+        syncCalendarForUser(user._id).catch(err => {
             console.error('Error during initial calendar sync:', err);
         });
 
-        // Send the user back to the exact project URL they were on!
         res.redirect(`${cleanOrigin}/dashboard?calendar=connected`);
     } catch (err) {
         console.error('Failed to exchange code for tokens:', err);
         res.redirect(`${cleanOrigin}/dashboard?calendar=error`);
-    }
-};
-
-const createCalendarEvent = async (event) => {
-    try {
-        const response = await calendar.events.insert({
-            calendarId: 'primary',
-            requestBody: event
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error creating calendar event:', error);
-        throw error;
     }
 };
 
@@ -152,6 +144,25 @@ const disconnectCalendar = async (req, res) => {
         user.lastCalendarSync = null;
         
         await user.save();
+
+        // Forget which doses were synced, so reconnecting (possibly with a
+        // different Google account) re-creates the events. Event IDs are
+        // deterministic, so reconnecting the same account won't duplicate them.
+        // Only today's and future doses are ever synced, so only those need resetting.
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const syncedTracks = await Track.find({
+            userId: user._id,
+            scheduledDate: { $gte: startOfToday },
+            "timings.calendarEventId": { $exists: true, $ne: null },
+        });
+        for (const track of syncedTracks) {
+            track.timings.forEach((timing) => {
+                timing.calendarEventId = undefined;
+                timing.lastSyncedAt = undefined;
+            });
+            await track.save();
+        }
 
         return res.status(200).json({
             message: 'Google Calendar disconnected successfully',
@@ -237,9 +248,8 @@ const getCalendarStatus = async (req, res) => {
 };
 
 export {
-    redirectToGoogle,
+    getGoogleAuthUrl,
     handleGoogleCallback,
-    createCalendarEvent,
     syncCalendar,
     disconnectCalendar,
     toggleCalendarSync,

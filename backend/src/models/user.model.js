@@ -33,7 +33,16 @@ const userSchema = new Schema(
         }
     },
     {
-        timestamps: true
+        timestamps: true,
+        // Never send OAuth or push credentials to the browser. /users/me and
+        // /users/sync used to return the Google refresh token in plain JSON.
+        toJSON: {
+            transform: (_doc, ret) => {
+                delete ret.googleTokens;
+                delete ret.fcmToken;
+                return ret;
+            },
+        },
     }
 )
 

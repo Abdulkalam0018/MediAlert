@@ -1,7 +1,8 @@
+import mongoose from "mongoose";
 import { Elixir } from "../models/elixir.model.js";
 import { Track } from "../models/track.model.js";
 import { getUserId, notifyRealtimeUser } from "../utils/clerk.js";
-import { generateDailyTracksOfUser } from "../utils/sync.js";
+import { generateDailyTracksOfUser, insertTracksIgnoringDuplicates } from "../utils/sync.js";
 import { getRedisClient } from "../config/redis.js";
 
 // Utility function to transform tracks into timing-based documents
@@ -35,6 +36,45 @@ const transformTracksToTimings = (tracks) => {
     });
 
     return timings;
+};
+
+const VALID_STATUSES = ["pending", "taken", "missed", "delayed"];
+
+// "2026-09-25" must mean that calendar day in the app timezone. new Date("2026-09-25")
+// parses as UTC midnight, which is the previous day west of UTC.
+const parseDateParam = (value) => {
+    if (!value) return new Date();
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+    if (match) {
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+    return new Date(value);
+};
+
+// Offline replays send the time the dose was actually marked. Accept it only
+// if it's plausible: not in the future and not more than a day before the dose day.
+const resolveTakenAt = (clientValue, scheduledDate) => {
+    const now = new Date();
+    if (!clientValue) return now;
+
+    const candidate = new Date(clientValue);
+    if (Number.isNaN(candidate.getTime())) return now;
+
+    const earliest = new Date(scheduledDate);
+    earliest.setDate(earliest.getDate() - 1);
+
+    if (candidate > now || candidate < earliest) return now;
+    return candidate;
+};
+
+const safeRedis = async (label, fn) => {
+    try {
+        return await fn();
+    } catch (error) {
+        // Redis hiccups should degrade to a cache miss, not a 500.
+        console.error(`Redis ${label} failed:`, error.message);
+        return null;
+    }
 };
 
 const createTracksForDate = async (userId, scheduledDate) => {
@@ -106,7 +146,7 @@ const createTracksForDate = async (userId, scheduledDate) => {
     }
 
     if (createdTracks.length > 0) {
-        await Track.insertMany(createdTracks);
+        await insertTracksIgnoringDuplicates(createdTracks);
     }
 
     return { success: true, tracks: createdTracks };
@@ -197,7 +237,10 @@ const getTracksByDate = async (req, res) => {
 
         const dateParam = req.params?.date;
 
-        let requestedDate = dateParam ? new Date(dateParam) : new Date();
+        const requestedDate = parseDateParam(dateParam);
+        if (Number.isNaN(requestedDate.getTime())) {
+            return res.status(400).json({ message: "Invalid date. Use YYYY-MM-DD." });
+        }
         requestedDate.setHours(0, 0, 0, 0);
         
         let nextDate = new Date(requestedDate);
@@ -208,7 +251,7 @@ const getTracksByDate = async (req, res) => {
         const cacheKey = `tracks:${_id}:${requestedDate.toISOString()}`;
 
         if (redisClient) {
-            const cachedData = await redisClient.get(cacheKey);
+            const cachedData = await safeRedis("get", () => redisClient.get(cacheKey));
             if (cachedData) {
                 console.log(`🚀 Serving tracks from Redis Cache for user ${_id}`);
                 return res.status(200).json({ medications: JSON.parse(cachedData) });
@@ -231,8 +274,7 @@ const getTracksByDate = async (req, res) => {
 
         if (redisClient) {
             // Cache for 1 hour (3600 seconds)
-            await redisClient.setEx(cacheKey, 3600, JSON.stringify(medications));
-            console.log(`💾 Saved tracks to Redis Cache for user ${_id}`);
+            await safeRedis("setEx", () => redisClient.setEx(cacheKey, 3600, JSON.stringify(medications)));
         }
 
         return res.status(200).json({ medications });
@@ -246,7 +288,17 @@ const updateTrackTimingStatus = async (req, res) => {
 
     try {
         const { id } = req.params;
-        const { time, status } = req.body;
+        const { time, status, takenAt } = req.body || {};
+
+        if (!VALID_STATUSES.includes(status)) {
+            return res.status(400).json({ message: `Invalid status. Use one of: ${VALID_STATUSES.join(", ")}.` });
+        }
+        if (!time || Number.isNaN(new Date(time).getTime())) {
+            return res.status(400).json({ message: "A valid dose time is required." });
+        }
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(404).json({ message: "Track not found or does not belong to the user." });
+        }
 
         const _id = await getUserId(req);
 
@@ -273,7 +325,7 @@ const updateTrackTimingStatus = async (req, res) => {
 
         track.timings[timingIndex].status = status;
         if (status === "taken") {
-            track.timings[timingIndex].takenAt = new Date();
+            track.timings[timingIndex].takenAt = resolveTakenAt(takenAt, track.scheduledDate);
         } else {
             track.timings[timingIndex].takenAt = null;
         }
@@ -287,8 +339,7 @@ const updateTrackTimingStatus = async (req, res) => {
             const scheduledDate = new Date(track.scheduledDate);
             scheduledDate.setHours(0, 0, 0, 0);
             const cacheKey = `tracks:${_id}:${scheduledDate.toISOString()}`;
-            await redisClient.del(cacheKey);
-            console.log(`🧹 Cleared Redis Cache for user ${_id} on date ${scheduledDate.toISOString()}`);
+            await safeRedis("del", () => redisClient.del(cacheKey));
         }
 
         // Emit real-time Socket.io event to all user rooms
