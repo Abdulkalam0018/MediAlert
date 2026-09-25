@@ -18,6 +18,8 @@ import {
   Activity,
 } from "lucide-react";
 import { askAI } from "../../api/ai";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import "./AIHealthAssistant.css";
 
 const STARTER_MESSAGE =
@@ -479,7 +481,15 @@ export default function AIHealthAssistant() {
                       </div>
 
                       <div className={`ai-msg-bubble ${isUser ? "user" : "assistant"}`}>
-                        <p style={{ margin: 0 }}>{message.text}</p>
+                                                {isUser ? (
+                          <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.text}</p>
+                        ) : (
+                          <div className="markdown-body">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.text}
+                            </ReactMarkdown>
+                          </div>
+                        )}
 
                         {/* Action feedback card if track status was updated */}
                         {message.action?.type === "track_status_updated" && (
