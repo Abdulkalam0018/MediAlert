@@ -67,7 +67,7 @@ const DoseHistory = () => {
               <Card key={idx} style={{ padding: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1.1rem" }}>
-                    {dose.elixir?.name || "Unknown Medication"}
+                    {dose.name || "Unknown Medication"}
                   </h3>
                   <div style={{ display: "flex", gap: "1rem", color: "#64748b", fontSize: "0.9rem" }}>
                     <span>
